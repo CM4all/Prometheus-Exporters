@@ -32,6 +32,9 @@
 
 #pragma once
 
+#include "pcre/Regex.hxx"
+
+#include <forward_list>
 #include <set>
 #include <string>
 #include <vector>
@@ -43,6 +46,7 @@ struct ProcessNameConfig {
 
 	std::set<std::string> comm;
 	std::set<std::string> exe;
+	std::forward_list<UniqueRegex> cmdline;
 
 	bool Match(const ProcessInfo &info) const noexcept;
 	std::string MakeName(const ProcessInfo &info) const noexcept;

@@ -35,5 +35,5 @@
 #include <string>
 
 struct ProcessInfo {
-	std::string comm, exe;
+	std::string comm, exe, cmdline;
 };

@@ -44,6 +44,7 @@
 #include "util/IterableSplitString.hxx"
 #include "util/PrintException.hxx"
 
+#include <algorithm>
 #include <cstdlib>
 #include <string_view>
 
@@ -276,9 +277,16 @@ CollectProcessGroups(const ProcessExporterConfig &config, FileDescriptor proc_fd
 						      stat_buffer,
 						      sizeof(stat_buffer)));
 
+		char cmdline_buffer[1024];
+
 		ProcessInfo info;
 		info.comm = stat.comm;
 		info.exe = exe_sv;
+		info.cmdline = ReadTextFile(pid_fd, "cmdline",
+					    cmdline_buffer,
+					    sizeof(cmdline_buffer));
+		std::replace(info.cmdline.begin(), info.cmdline.end(),
+			     '\0', ' ');
 
 		auto group_name = config.MakeName(info);
 		if (group_name.empty())

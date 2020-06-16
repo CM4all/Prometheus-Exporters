@@ -50,6 +50,11 @@ ProcessNameConfig::Match(const ProcessInfo &info) const noexcept
 			return false;
 	}
 
+	const std::string_view c = info.cmdline;
+	for (const auto &i : cmdline)
+		if (!i.Match(c))
+			return false;
+
 	return true;
 }
 
@@ -90,6 +95,12 @@ LoadProcessNameConfig(const YAML::Node &node)
 	if (exe && exe.IsSequence())
 		for (const auto &e : exe)
 			pn.exe.emplace(e.as<std::string>());
+
+	const auto cmdline = node["cmdline"];
+	if (cmdline && cmdline.IsSequence())
+		for (const auto &c : cmdline)
+			pn.cmdline.emplace_front(c.as<std::string>().c_str(),
+						 false, false);
 
 	return pn;
 }

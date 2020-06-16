@@ -69,6 +69,7 @@ libcommon_enable_DefaultFifoBuffer = false
 libcommon_enable_net_log = false
 
 subdir('libcommon/src/util')
+subdir('libcommon/src/pcre')
 subdir('libcommon/src/io')
 
 executable(
@@ -80,6 +81,7 @@ executable(
     libsystemd,
     libyamlcpp,
     io_dep,
+    pcre_dep,
   ],
   install: true,
   install_dir: 'sbin',
