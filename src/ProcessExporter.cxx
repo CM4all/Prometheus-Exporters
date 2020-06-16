@@ -411,7 +411,6 @@ try {
 	BufferedOutputStream bos(sos);
 
 	try {
-		for (int i = 0; i < 1000; ++i)
 		ExportProc(bos);
 	} catch (...) {
 		PrintException(std::current_exception());
