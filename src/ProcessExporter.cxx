@@ -32,6 +32,7 @@
 
 #include "ProcessConfig.hxx"
 #include "ProcessInfo.hxx"
+#include "ProcessIterator.hxx"
 #include "io/StdioOutputStream.hxx"
 #include "io/BufferedOutputStream.hxx"
 #include "io/DirectoryReader.hxx"
@@ -69,63 +70,6 @@ ReadTextFile(FileDescriptor directory_fd, const char *filename,
 {
 	return ReadTextFile(OpenReadOnly(directory_fd, filename),
 			    buffer, buffer_size);
-}
-
-template<typename F>
-static void
-ForEachProcess(FileDescriptor proc_fd, F &&f)
-{
-	DirectoryReader r(OpenDirectory(proc_fd, "."));
-	while (auto name = r.Read()) {
-		char *endptr;
-		auto pid = strtoul(name, &endptr, 10);
-		if (endptr == name || *endptr != 0 || pid <= 0)
-			/* not a positive number */
-			continue;
-
-		UniqueFileDescriptor pid_fd;
-
-		try {
-			pid_fd = OpenDirectory(proc_fd, name);
-		} catch (...) {
-			PrintException(std::current_exception());
-		}
-
-		f(pid, std::move(pid_fd));
-	}
-}
-
-template<typename F>
-static void
-ForEachProcessThread(FileDescriptor pid_fd, F &&f)
-{
-	DirectoryReader r(OpenDirectory(pid_fd, "task"));
-	while (auto name = r.Read()) {
-		char *endptr;
-		auto tid = strtoul(name, &endptr, 10);
-		if (endptr == name || *endptr != 0 || tid <= 0)
-			/* not a positive number */
-			continue;
-
-		UniqueFileDescriptor tid_fd;
-
-		try {
-			tid_fd = OpenDirectory(r.GetFileDescriptor(), name);
-		} catch (...) {
-			PrintException(std::current_exception());
-		}
-
-		f(tid, std::move(tid_fd));
-	}
-}
-
-template<typename F>
-static void
-ForEachThread(FileDescriptor proc_fd, F &&f)
-{
-	ForEachProcess(proc_fd, [&](unsigned, FileDescriptor pid_fd){
-		ForEachProcessThread(pid_fd, f);
-	});
 }
 
 template<typename T>
