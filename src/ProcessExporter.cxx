@@ -376,12 +376,16 @@ ExportProc(const ProcessExporterConfig &config, BufferedOutputStream &os)
 int
 main(int argc, char **argv) noexcept
 try {
-	if (argc != 2) {
+	const char *config_file = "/etc/cm4all/prometheus-exporters/process.yml";
+	if (argc >= 2)
+		config_file = argv[1];
+
+	if (argc > 2) {
 		fprintf(stderr, "Usage: %s CONFIGFILE\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 
-	const auto config = LoadProcessExporterConfig(argv[1]);
+	const auto config = LoadProcessExporterConfig(config_file);
 
 	return RunExporter([&](BufferedOutputStream &os){
 		ExportProc(config, os);
