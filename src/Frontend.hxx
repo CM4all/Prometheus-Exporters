@@ -33,11 +33,19 @@
 #pragma once
 
 #include "io/StdioOutputStream.hxx"
+#include "io/StringOutputStream.hxx"
 #include "io/BufferedOutputStream.hxx"
 #include "util/PrintException.hxx"
 
+#include <systemd/sd-daemon.h>
+
 #include <cstdlib>
 #include <exception>
+#include <memory>
+
+#include <poll.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 template<typename Handler>
 int
@@ -62,7 +70,93 @@ RunExporterStdio(Handler &&handler)
 
 template<typename Handler>
 int
+RunExporterHttp(const std::size_t n_listeners, Handler &&handler)
+{
+	int result = EXIT_SUCCESS;
+
+	auto pfds = std::make_unique<struct pollfd[]>(n_listeners);
+	for (std::size_t i = 0; i < n_listeners; ++i) {
+		auto &pfd = pfds[i];
+		pfd.fd = SD_LISTEN_FDS_START + i;
+		pfd.events = POLLIN;
+	}
+
+	/* tell systemd we're ready */
+	sd_notify(0, "READY=1");
+
+	while (true) {
+		if (poll(pfds.get(), n_listeners, -1) <= 0)
+			break;
+
+		for (std::size_t i = 0; i < n_listeners; ++i) {
+			if (pfds[i].revents & (POLLERR | POLLHUP)) {
+				pfds[i].fd = -1;
+				pfds[i].revents = 0;
+				continue;
+			}
+
+			int fd = accept4(SD_LISTEN_FDS_START + i,
+					 nullptr, nullptr,
+					 SOCK_NONBLOCK|SOCK_CLOEXEC);
+			if (fd < 0) {
+				pfds[i].fd = -1;
+				pfds[i].revents = 0;
+				continue;
+			}
+
+			/* we never read the HTTP request; just write
+			   the response */
+
+			try {
+				StringOutputStream sos;
+
+				{
+					BufferedOutputStream bos(sos);
+					handler(bos);
+					bos.Flush();
+				}
+
+				const auto &value = sos.GetValue();
+
+				char headers[1024];
+				size_t header_size =
+					sprintf(headers, "HTTP/1.1 200 OK\r\n"
+						"connection: close\r\n"
+						"content-type: text/plain\r\n"
+						"content-length: %zu\r\n"
+						"\r\n",
+						value.size());
+
+				send(fd, headers, header_size,
+				     MSG_DONTWAIT|MSG_MORE|MSG_NOSIGNAL);
+				send(fd, value.data(), value.size(),
+				     MSG_DONTWAIT|MSG_NOSIGNAL);
+
+				/* this avoids resetting the
+				   connection on close() */
+				shutdown(fd, SHUT_WR);
+				close(fd);
+			} catch (...) {
+				PrintException(std::current_exception());
+			}
+
+			close(fd);
+		}
+	}
+
+	return result;
+}
+
+template<typename Handler>
+int
 RunExporter(Handler &&handler)
 {
+	int n_listeners = sd_listen_fds(true);
+	if (n_listeners > 0)
+		/* if we have systemd sockets, assume those are HTTP
+		   listeners */
+		return RunExporterHttp(n_listeners,
+				       std::forward<Handler>(handler));
+
 	return RunExporterStdio(std::forward<Handler>(handler));
 }
