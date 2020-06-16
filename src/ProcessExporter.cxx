@@ -47,6 +47,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <string_view>
+#include <unordered_map>
 
 static std::string_view
 ReadTextFile(FileDescriptor fd, char *buffer, size_t buffer_size)
