@@ -38,19 +38,19 @@
 bool
 ProcessNameConfig::Match(const ProcessInfo &info) const noexcept
 {
-	if (!info.comm.empty()) {
+	if (!comm.empty()) {
 		const auto i = comm.find(info.comm);
-		if (i != comm.end())
-			return true;
+		if (i == comm.end())
+			return false;
 	}
 
-	if (!info.exe.empty()) {
+	if (!exe.empty()) {
 		const auto i = exe.find(info.exe);
-		if (i != exe.end())
-			return true;
+		if (i == exe.end())
+			return false;
 	}
 
-	return false;
+	return true;
 }
 
 std::string
