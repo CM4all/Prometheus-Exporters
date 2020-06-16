@@ -66,17 +66,10 @@ inc = include_directories('src', 'libcommon/src')
 libcommon_enable_c = false
 libcommon_enable_libcap = false
 libcommon_enable_DefaultFifoBuffer = false
+libcommon_enable_net_log = false
 
 subdir('libcommon/src/util')
-subdir('libcommon/src/time')
-subdir('libcommon/src/http')
 subdir('libcommon/src/io')
-subdir('libcommon/src/io/uring')
-subdir('libcommon/src/system')
-subdir('libcommon/src/net')
-subdir('libcommon/src/event')
-subdir('libcommon/src/event/net')
-subdir('libcommon/src/event/uring')
 
 executable(
   'cm4all-process-exporter',
@@ -86,8 +79,7 @@ executable(
   dependencies: [
     libsystemd,
     libyamlcpp,
-    event_net_dep,
-    event_uring_dep,
+    io_dep,
   ],
   install: true,
   install_dir: 'sbin',
