@@ -1,0 +1,42 @@
+process_names:
+  - exe:
+      - cron
+      - incrond
+      - cm4all-beng-lb
+      - cm4all-thirdparty-node-exporter
+      - cm4all-thirdparty-process-exporter
+  - name: "qmail"
+    cmdline:
+      - ^qmail-
+  - name: "tomcat"
+    exe:
+      - tomcat7_tomcat
+  - exe:
+      - clear-html
+      - cm4all-beng-proxy
+      - cm4all-workshop
+      - coma-was
+      - slapd
+      - spawn
+      - squid
+      - cm4all-thirdparty-blackbox-exporter
+  - name: twistd
+    exe:
+      - twistd
+    cmdline:
+      - --nodaemon.*translation
+  - name: widget-event-listener
+    exe:
+      - nodejs
+    cmdline:
+      - run-widget-event-listener
+  - name: cdn-combine
+    exe:
+      - nodejs
+    cmdline:
+      - cdn-combine
+  - name: history-ws
+    exe:
+      - java
+    cmdline:
+      - history-ws

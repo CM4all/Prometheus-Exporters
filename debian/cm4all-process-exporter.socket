@@ -1,0 +1,7 @@
+[Unit]
+
+[Socket]
+ListenStream=@cm4all-process-exporter
+
+[Install]
+WantedBy=sockets.target
