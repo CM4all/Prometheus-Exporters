@@ -43,13 +43,13 @@
 #include "util/Compiler.h"
 #include "util/IterableSplitString.hxx"
 #include "util/PrintException.hxx"
+#include "util/StringView.hxx"
 
 #include <algorithm>
 #include <cstdlib>
-#include <string_view>
 #include <unordered_map>
 
-static std::string_view
+static StringView
 ReadTextFile(FileDescriptor fd, char *buffer, size_t buffer_size)
 {
 	ssize_t nbytes = fd.Read(buffer, buffer_size);
@@ -65,12 +65,22 @@ ReadTextFile(FileDescriptor fd, char *buffer, size_t buffer_size)
 	return {buffer, size};
 }
 
-static std::string_view
+static StringView
 ReadTextFile(FileDescriptor directory_fd, const char *filename,
 	     char *buffer, size_t buffer_size)
 {
 	return ReadTextFile(OpenReadOnly(directory_fd, filename),
 			    buffer, buffer_size);
+}
+
+template<std::size_t buffer_size>
+static std::string
+ReadTextFile(FileDescriptor directory_fd, const char *filename)
+{
+	char buffer[buffer_size];
+	auto value = ReadTextFile(OpenReadOnly(directory_fd, filename),
+				  buffer, buffer_size);
+	return {value.data, value.size};
 }
 
 template<typename T>
@@ -111,7 +121,7 @@ struct ProcessStatus {
 };
 
 static auto
-ParseProcessStatus(std::string_view text)
+ParseProcessStatus(StringView text)
 {
 	ProcessStatus result;
 
@@ -137,7 +147,7 @@ ParseProcessStatus(std::string_view text)
 }
 
 struct ProcessStat {
-	std::string_view comm;
+	StringView comm;
 	char state = 0;
 	unsigned long minflt = 0, majflt = 0;
 	unsigned long utime = 0, stime = 0;
@@ -270,22 +280,16 @@ CollectProcessGroups(const ProcessExporterConfig &config, FileDescriptor proc_fd
 		if (name.empty())
 			return;
 
-		const std::string_view exe_sv = name;
-
 		char stat_buffer[1024];
 		const auto stat =
 			ParseProcessStat(ReadTextFile(pid_fd, "stat",
 						      stat_buffer,
 						      sizeof(stat_buffer)));
 
-		char cmdline_buffer[1024];
-
 		ProcessInfo info;
-		info.comm = stat.comm;
-		info.exe = exe_sv;
-		info.cmdline = ReadTextFile(pid_fd, "cmdline",
-					    cmdline_buffer,
-					    sizeof(cmdline_buffer));
+		info.comm = {stat.comm.data, stat.comm.size};
+		info.exe = {name.data, name.size};
+		info.cmdline = ReadTextFile<4096>(pid_fd, "cmdline");
 		std::replace(info.cmdline.begin(), info.cmdline.end(),
 			     '\0', ' ');
 
