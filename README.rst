@@ -9,7 +9,7 @@ Building
 
 You need:
 
-- a C++20 compiler (gcc 6 or clang)
+- a C++20 compiler (gcc 8 or clang)
 - `meson 0.49 <http://mesonbuild.com/>`__
 - `Boost <http://boost.org/>`__
 - `liburing <https://github.com/axboe/liburing>`__
