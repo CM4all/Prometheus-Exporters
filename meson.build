@@ -1,7 +1,7 @@
 project('CM4all Prometheus Exporters', ['cpp'], version: '0.1',
   meson_version: '>= 0.49',
   default_options: [
-    'cpp_std=c++2a',
+    'cpp_std=c++17',
     'warning_level=3',
   ],
 )
