@@ -30,6 +30,8 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "ProcessConfig.hxx"
+#include "ProcessInfo.hxx"
 #include "io/StdioOutputStream.hxx"
 #include "io/BufferedOutputStream.hxx"
 #include "io/DirectoryReader.hxx"
@@ -190,6 +192,7 @@ ParseProcessStatus(std::string_view text)
 }
 
 struct ProcessStat {
+	std::string_view comm;
 	char state = 0;
 	unsigned long minflt = 0, majflt = 0;
 	unsigned long utime = 0, stime = 0;
@@ -204,7 +207,15 @@ ParseProcessStat(StringView text)
 	StringView s;
 
 	std::tie(s, text) = text.Split(' '); // pid
+
 	std::tie(s, text) = text.Split(' '); // comm
+	if (!s.empty() && s.front() == '(' && s.back() == ')') {
+		s.pop_front();
+		s.pop_back();
+	}
+
+	result.comm = s;
+
 	std::tie(s, text) = text.Split(' '); // state
 	if (!s.empty())
 		result.state = s.front();
@@ -284,7 +295,7 @@ CollectProcess(ProcessGroupData &group, unsigned, FileDescriptor pid_fd)
 						status_buffer,
 						sizeof(status_buffer)));
 
-	char stat_buffer[4096];
+	char stat_buffer[1024];
 	const auto stat =
 		ParseProcessStat(ReadTextFile(pid_fd, "stat",
 					      stat_buffer,
@@ -295,7 +306,7 @@ CollectProcess(ProcessGroupData &group, unsigned, FileDescriptor pid_fd)
 }
 
 static auto
-CollectProcessGroups(FileDescriptor proc_fd)
+CollectProcessGroups(const ProcessExporterConfig &config, FileDescriptor proc_fd)
 {
 	ProcessGroupMap groups;
 
@@ -314,7 +325,23 @@ CollectProcessGroups(FileDescriptor proc_fd)
 		if (name.empty())
 			return;
 
-		auto e = groups.emplace(std::string(std::string_view(name)),
+		const std::string_view exe_sv = name;
+
+		char stat_buffer[1024];
+		const auto stat =
+			ParseProcessStat(ReadTextFile(pid_fd, "stat",
+						      stat_buffer,
+						      sizeof(stat_buffer)));
+
+		ProcessInfo info;
+		info.comm = stat.comm;
+		info.exe = exe_sv;
+
+		auto group_name = config.MakeName(info);
+		if (group_name.empty())
+			return;
+
+		auto e = groups.emplace(std::move(group_name),
 					ProcessGroupData{});
 		auto &group = e.first->second;
 		++group.n_procs;
@@ -391,27 +418,35 @@ DumpProcessGroups(BufferedOutputStream &os, const ProcessGroupMap &groups)
 }
 
 static void
-ExportProc(BufferedOutputStream &os, FileDescriptor proc_fd)
+ExportProc(const ProcessExporterConfig &config, BufferedOutputStream &os,
+	   FileDescriptor proc_fd)
 {
-	DumpProcessGroups(os, CollectProcessGroups(proc_fd));
+	DumpProcessGroups(os, CollectProcessGroups(config, proc_fd));
 }
 
 static void
-ExportProc(BufferedOutputStream &os)
+ExportProc(const ProcessExporterConfig &config, BufferedOutputStream &os)
 {
-	ExportProc(os, OpenDirectory("/proc"));
+	ExportProc(config, os, OpenDirectory("/proc"));
 }
 
 int
-main(int, char **) noexcept
+main(int argc, char **argv) noexcept
 try {
+	if (argc != 2) {
+		fprintf(stderr, "Usage: %s CONFIGFILE\n", argv[0]);
+		return EXIT_FAILURE;
+	}
+
+	const auto config = LoadProcessExporterConfig(argv[1]);
+
 	int result = EXIT_SUCCESS;
 
 	StdioOutputStream sos(stdout);
 	BufferedOutputStream bos(sos);
 
 	try {
-		ExportProc(bos);
+		ExportProc(config, bos);
 	} catch (...) {
 		PrintException(std::current_exception());
 		result = EXIT_FAILURE;

@@ -13,6 +13,7 @@ You need:
 - `meson 0.49 <http://mesonbuild.com/>`__
 - `Boost <http://boost.org/>`__
 - `liburing <https://github.com/axboe/liburing>`__
+- `yaml-cpp <https://github.com/jbeder/yaml-cpp>`__
 
 To build it, type::
 

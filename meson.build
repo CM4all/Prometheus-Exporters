@@ -58,6 +58,9 @@ add_global_arguments(compiler.get_supported_arguments(test_cxxflags), language: 
 
 libsystemd = dependency('libsystemd')
 
+libyamlcpp = dependency('yaml-cpp',
+                        fallback: ['yaml-cpp', 'libyamlcpp_dep'])
+
 inc = include_directories('src', 'libcommon/src')
 
 libcommon_enable_c = false
@@ -78,9 +81,11 @@ subdir('libcommon/src/event/uring')
 executable(
   'cm4all-process-exporter',
   'src/ProcessExporter.cxx',
+  'src/ProcessConfig.cxx',
   include_directories: inc,
   dependencies: [
     libsystemd,
+    libyamlcpp,
     event_net_dep,
     event_uring_dep,
   ],
