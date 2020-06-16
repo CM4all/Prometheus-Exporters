@@ -30,10 +30,10 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "Frontend.hxx"
 #include "ProcessConfig.hxx"
 #include "ProcessInfo.hxx"
 #include "ProcessIterator.hxx"
-#include "io/StdioOutputStream.hxx"
 #include "io/BufferedOutputStream.hxx"
 #include "io/DirectoryReader.hxx"
 #include "io/Open.hxx"
@@ -44,9 +44,8 @@
 #include "util/IterableSplitString.hxx"
 #include "util/PrintException.hxx"
 
+#include <cstdlib>
 #include <string_view>
-
-#include <stdlib.h>
 
 static std::string_view
 ReadTextFile(FileDescriptor fd, char *buffer, size_t buffer_size)
@@ -384,21 +383,9 @@ try {
 
 	const auto config = LoadProcessExporterConfig(argv[1]);
 
-	int result = EXIT_SUCCESS;
-
-	StdioOutputStream sos(stdout);
-	BufferedOutputStream bos(sos);
-
-	try {
-		ExportProc(config, bos);
-	} catch (...) {
-		PrintException(std::current_exception());
-		result = EXIT_FAILURE;
-	}
-
-	bos.Flush();
-
-	return result;
+	return RunExporter([&](BufferedOutputStream &os){
+		ExportProc(config, os);
+	});
 } catch (...) {
 	PrintException(std::current_exception());
 	return EXIT_FAILURE;
