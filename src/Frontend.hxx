@@ -135,7 +135,6 @@ RunExporterHttp(const std::size_t n_listeners, Handler &&handler)
 				/* this avoids resetting the
 				   connection on close() */
 				shutdown(fd, SHUT_WR);
-				close(fd);
 			} catch (...) {
 				PrintException(std::current_exception());
 			}
