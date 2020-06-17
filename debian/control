@@ -16,6 +16,7 @@ Vcs-Git: git@github.com:CM4all/Prometheus-Exporters.git
 Package: cm4all-prometheus-exporters
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends},
- systemd (>= 232~), libnss-systemd
+ systemd (>= 232~)
+Recommends: libnss-systemd
 Description: CM4all Prometheus Exporters
  Contains exporters for Prometheus.
