@@ -117,9 +117,14 @@ struct CgroupMemoryValues {
 	std::map<std::string, uint64_t> stat;
 };
 
+struct CgroupPidsValues {
+	int64_t current = -1;
+};
+
 struct CgroupValues {
 	CgroupCpuacctValues cpuacct;
 	CgroupMemoryValues memory;
+	CgroupPidsValues pids;
 };
 
 struct CgroupsData {
@@ -244,6 +249,8 @@ WalkContext::HandleRegularFile(FileDescriptor parent_fd, const char *base)
 
 			group.memory.stat[ToString(name)] = ParseUint64(value);
 		});
+	} else if (StringIsEqual(base, "pids.current")) {
+		group.pids.current = ReadUint64File(parent_fd, base);
 	}
 }
 
@@ -280,7 +287,7 @@ CollectCgroup(const CgroupExporterConfig &config)
 {
 	CgroupsData data;
 
-	for (const char *mnt : {"/sys/fs/cgroup/blkio", "/sys/fs/cgroup/cpuacct", "/sys/fs/cgroup/memory"}) {
+	for (const char *mnt : {"/sys/fs/cgroup/cpuacct", "/sys/fs/cgroup/memory", "/sys/fs/cgroup/pids"}) {
 		WalkContext ctx(config, data);
 
 		try {
@@ -317,6 +324,14 @@ WriteMemory(BufferedOutputStream &os, const char *group, const char *type,
 {
 	os.Format("cgroup_memory_usage{groupname=\"%s\",type=\"%s\"} %" PRIu64 "\n",
 		  group, type, value);
+}
+
+static void
+WritePids(BufferedOutputStream &os, const char *group, int64_t value)
+{
+	if (value >= 0)
+		os.Format("cgroup_pids{groupname=\"%s\"} %" PRId64 "\n",
+			  group, value);
 }
 
 static void
@@ -359,6 +374,16 @@ DumpCgroup(BufferedOutputStream &os, const CgroupsData &data)
 		WriteMemory(os, group, "memory", memory.failcnt);
 		WriteMemory(os, group, "kmem", memory.kmem_failfnt);
 		WriteMemory(os, group, "memsw", memory.memsw_failcnt);
+	}
+
+	os.Write(R"(# HELP cgroup_pids Process/Thread count
+# TYPE cgroup_pids gauge
+)");
+
+	for (const auto &i : data.groups) {
+		const char *group = i.first.c_str();
+		const auto &pids = i.second.pids;
+		WritePids(os, group, pids.current);
 	}
 }
 
