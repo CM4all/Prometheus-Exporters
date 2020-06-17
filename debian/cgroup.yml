@@ -3,8 +3,12 @@ opaque_paths:
   - system.slice/cm4all-openssh.scope
   - system.slice/cm4all-workshop-spawn.scope
   - system.slice/system-cm4all.slice/bp-spawn.scope
+  - system.slice/system-cm4all.slice/openssh.scope
   - system.slice/system-getty.slice
-  - system.slice/system-systemd-fsck.slice
+  - system.slice/system-systemd\x2dfsck.slice
+  - system.slice/system-ssh.slice
+  - system.slice/system-cm4all\x2dspawn\x2dnetns.slice
+  - system.slice/system-serial\x2dgetty.slice
   - user.slice
 ignore_names:
   - "*.mount"
