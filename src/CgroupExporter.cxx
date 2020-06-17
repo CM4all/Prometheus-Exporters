@@ -121,10 +121,20 @@ struct CgroupPidsValues {
 	int64_t current = -1;
 };
 
+struct CgroupPressureItemValues {
+	double avg10 = -1, avg60 = -1, avg300 = -1;
+	double stall_time = -1;
+};
+
+struct CgroupPressureValues {
+	CgroupPressureItemValues some, full;
+};
+
 struct CgroupValues {
 	CgroupCpuacctValues cpuacct;
 	CgroupMemoryValues memory;
 	CgroupPidsValues pids;
+	CgroupPressureValues cpu_pressure, io_pressure, memory_pressure;
 };
 
 struct CgroupsData {
@@ -208,6 +218,50 @@ Substitute(char *dest, const char *src, const char *a, const char *b) noexcept
 	return stpcpy(dest, src);
 }
 
+static auto
+ParsePressureLine(StringView line)
+{
+	static constexpr double micro_factor = 1e-6;
+
+	CgroupPressureItemValues result;
+
+	for (StringView i : IterableSplitString(line, ' ')) {
+		StringView name, value;
+		std::tie(name, value) = i.Split('=');
+		if (value.IsNull())
+			continue;
+
+		if (name.Equals("avg10"))
+			result.avg10 = ParseDouble(value);
+		else if (name.Equals("avg60"))
+			result.avg60 = ParseDouble(value);
+		else if (name.Equals("avg300"))
+			result.avg300 = ParseDouble(value);
+		else if (name.Equals("total"))
+			result.stall_time = ParseUint64(value) * micro_factor;
+	}
+
+	return result;
+}
+
+static auto
+ReadPressureFile(FileDescriptor directory_fd, const char *filename)
+{
+	CgroupPressureValues result;
+
+	ForEachTextLine(directory_fd, filename, [&result](auto line){
+		StringView s;
+		std::tie(s, line) = line.Split(' ');
+
+		if (s.Equals("some"))
+			result.some = ParsePressureLine(line);
+		else if (s.Equals("full"))
+			result.full = ParsePressureLine(line);
+	});
+
+	return result;
+}
+
 inline void
 WalkContext::HandleRegularFile(FileDescriptor parent_fd, const char *base)
 {
@@ -251,6 +305,12 @@ WalkContext::HandleRegularFile(FileDescriptor parent_fd, const char *base)
 		});
 	} else if (StringIsEqual(base, "pids.current")) {
 		group.pids.current = ReadUint64File(parent_fd, base);
+	} else if (StringIsEqual(base, "cpu.pressure")) {
+		group.cpu_pressure = ReadPressureFile(parent_fd, base);
+	} else if (StringIsEqual(base, "io.pressure")) {
+		group.io_pressure = ReadPressureFile(parent_fd, base);
+	} else if (StringIsEqual(base, "memory.pressure")) {
+		group.memory_pressure = ReadPressureFile(parent_fd, base);
 	}
 }
 
@@ -287,7 +347,7 @@ CollectCgroup(const CgroupExporterConfig &config)
 {
 	CgroupsData data;
 
-	for (const char *mnt : {"/sys/fs/cgroup/cpuacct", "/sys/fs/cgroup/memory", "/sys/fs/cgroup/pids"}) {
+	for (const char *mnt : {"/sys/fs/cgroup/cpuacct", "/sys/fs/cgroup/memory", "/sys/fs/cgroup/pids", "/sys/fs/cgroup/unified"}) {
 		WalkContext ctx(config, data);
 
 		try {
@@ -332,6 +392,62 @@ WritePids(BufferedOutputStream &os, const char *group, int64_t value)
 	if (value >= 0)
 		os.Format("cgroup_pids{groupname=\"%s\"} %" PRId64 "\n",
 			  group, value);
+}
+
+static void
+WritePressureRatio(BufferedOutputStream &os, const char *group,
+		   const char *resource, const char *type,
+		   const char *window, double value)
+{
+	if (value >= 0)
+		os.Format("cgroup_pressure_ratio{groupname=\"%s\",resource=\"%s\",type=\"%s\",window=\"%s\"} %e\n",
+			  group, resource, type, window, value);
+}
+
+static void
+WritePressureRatio(BufferedOutputStream &os, const char *group,
+		   const char *resource, const char *type,
+		   const CgroupPressureItemValues &values)
+{
+	WritePressureRatio(os, group, resource, type, "10", values.avg10);
+	WritePressureRatio(os, group, resource, type, "60", values.avg60);
+	WritePressureRatio(os, group, resource, type, "300", values.avg300);
+}
+
+static void
+WritePressureRatio(BufferedOutputStream &os, const char *group,
+		   const char *resource,
+		   const CgroupPressureValues &values)
+{
+	WritePressureRatio(os, group, resource, "some", values.some);
+	WritePressureRatio(os, group, resource, "full", values.full);
+}
+
+static void
+WritePressureStallTime(BufferedOutputStream &os, const char *group,
+		       const char *resource, const char *type,
+		       double value)
+{
+	if (value >= 0)
+		os.Format("cgroup_pressure_stall_time{groupname=\"%s\",resource=\"%s\",type=\"%s\"} %e\n",
+			  group, resource, type, value);
+}
+
+static void
+WritePressureStallTime(BufferedOutputStream &os, const char *group,
+		       const char *resource, const char *type,
+		       const CgroupPressureItemValues &values)
+{
+	WritePressureStallTime(os, group, resource, type, values.stall_time);
+}
+
+static void
+WritePressureStallTime(BufferedOutputStream &os, const char *group,
+		   const char *resource,
+		   const CgroupPressureValues &values)
+{
+	WritePressureStallTime(os, group, resource, "some", values.some);
+	WritePressureStallTime(os, group, resource, "full", values.full);
 }
 
 static void
@@ -384,6 +500,28 @@ DumpCgroup(BufferedOutputStream &os, const CgroupsData &data)
 		const char *group = i.first.c_str();
 		const auto &pids = i.second.pids;
 		WritePids(os, group, pids.current);
+	}
+
+	os.Write(R"(# HELP cgroup_pressure_ratio Pressure stall ratio
+# TYPE cgroup_pressure_ratio gauge
+)");
+
+	for (const auto &i : data.groups) {
+		const char *group = i.first.c_str();
+		WritePressureRatio(os, group, "cpu", i.second.cpu_pressure);
+		WritePressureRatio(os, group, "io", i.second.io_pressure);
+		WritePressureRatio(os, group, "memory", i.second.memory_pressure);
+	}
+
+	os.Write(R"(# HELP cgroup_pressure_stall_time Pressure stall time
+# TYPE cgroup_pressure_stall_time counter
+)");
+
+	for (const auto &i : data.groups) {
+		const char *group = i.first.c_str();
+		WritePressureStallTime(os, group, "cpu", i.second.cpu_pressure);
+		WritePressureStallTime(os, group, "io", i.second.io_pressure);
+		WritePressureStallTime(os, group, "memory", i.second.memory_pressure);
 	}
 }
 

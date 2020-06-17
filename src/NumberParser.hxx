@@ -35,6 +35,9 @@
 #include "util/CharUtil.hxx"
 #include "util/StringView.hxx"
 
+#include <cmath>
+#include <utility>
+
 template<typename T>
 gcc_pure
 T
@@ -72,4 +75,15 @@ inline auto
 ParseUint64(StringView text) noexcept
 {
 	return ParseUnsignedT<uint64_t>(text);
+}
+
+gcc_pure
+inline double
+ParseDouble(StringView text) noexcept
+{
+	StringView a, b;
+	std::tie(a, b) = text.Split('.');
+
+	return (double)ParseUint64(a) +
+		(double)ParseUint64(b) * pow(10, -(double)b.size);
 }
