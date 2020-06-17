@@ -76,6 +76,7 @@ executable(
   'cm4all-process-exporter',
   'src/ProcessExporter.cxx',
   'src/ProcessConfig.cxx',
+  'src/TextFile.cxx',
   include_directories: inc,
   dependencies: [
     libsystemd,

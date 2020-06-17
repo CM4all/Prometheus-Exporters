@@ -34,6 +34,7 @@
 #include "ProcessConfig.hxx"
 #include "ProcessInfo.hxx"
 #include "ProcessIterator.hxx"
+#include "TextFile.hxx"
 #include "io/BufferedOutputStream.hxx"
 #include "io/DirectoryReader.hxx"
 #include "io/Open.hxx"
@@ -49,32 +50,8 @@
 #include <cstdlib>
 #include <unordered_map>
 
-static StringView
-ReadTextFile(FileDescriptor fd, char *buffer, size_t buffer_size)
-{
-	ssize_t nbytes = fd.Read(buffer, buffer_size);
-	if (nbytes < 0)
-		throw MakeErrno("Failed to read");
-
-	const size_t size = nbytes;
-
-	if (size >= buffer_size)
-		throw std::runtime_error("File too large");
-
-	buffer[size] = 0;
-	return {buffer, size};
-}
-
-static StringView
-ReadTextFile(FileDescriptor directory_fd, const char *filename,
-	     char *buffer, size_t buffer_size)
-{
-	return ReadTextFile(OpenReadOnly(directory_fd, filename),
-			    buffer, buffer_size);
-}
-
 template<std::size_t buffer_size>
-static std::string
+std::string
 ReadTextFile(FileDescriptor directory_fd, const char *filename)
 {
 	char buffer[buffer_size];
