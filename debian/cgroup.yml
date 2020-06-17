@@ -1,0 +1,11 @@
+opaque_paths:
+  - system.slice/cm4all-beng-spawn.scope
+  - system.slice/cm4all-openssh.scope
+  - system.slice/cm4all-workshop-spawn.scope
+  - system.slice/system-cm4all.slice/bp-spawn.scope
+  - system.slice/system-getty.slice
+  - system.slice/system-systemd-fsck.slice
+  - user.slice
+ignore_names:
+  - "*.mount"
+  - "*.swap"

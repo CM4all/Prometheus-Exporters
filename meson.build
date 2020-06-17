@@ -87,3 +87,18 @@ executable(
   install: true,
   install_dir: 'sbin',
 )
+
+executable(
+  'cm4all-cgroup-exporter',
+  'src/CgroupExporter.cxx',
+  'src/CgroupConfig.cxx',
+  'src/TextFile.cxx',
+  include_directories: inc,
+  dependencies: [
+    libsystemd,
+    libyamlcpp,
+    io_dep,
+  ],
+  install: true,
+  install_dir: 'sbin',
+)
