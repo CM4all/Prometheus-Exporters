@@ -35,11 +35,13 @@
 #include "io/StdioOutputStream.hxx"
 #include "io/StringOutputStream.hxx"
 #include "io/BufferedOutputStream.hxx"
+#include "util/ConstBuffer.hxx"
 #include "util/PrintException.hxx"
 
 #include <systemd/sd-daemon.h>
 
 #include <cstdlib>
+#include <cstdint>
 #include <exception>
 #include <memory>
 
@@ -66,6 +68,21 @@ RunExporterStdio(Handler &&handler)
 	bos.Flush();
 
 	return result;
+}
+
+static bool
+SendFull(int fd, ConstBuffer<char> buffer) noexcept
+{
+	while (!buffer.empty()) {
+		ssize_t nbytes = send(fd, buffer.data, buffer.size,
+				      MSG_NOSIGNAL);
+		if (nbytes <= 0)
+			return false;
+
+		buffer.skip_front(nbytes);
+	}
+
+	return true;
 }
 
 template<typename Handler>
@@ -97,7 +114,7 @@ RunExporterHttp(const std::size_t n_listeners, Handler &&handler)
 
 			int fd = accept4(SD_LISTEN_FDS_START + i,
 					 nullptr, nullptr,
-					 SOCK_NONBLOCK|SOCK_CLOEXEC);
+					 SOCK_CLOEXEC);
 			if (fd < 0) {
 				pfds[i].fd = -1;
 				pfds[i].revents = 0;
@@ -127,14 +144,11 @@ RunExporterHttp(const std::size_t n_listeners, Handler &&handler)
 						"\r\n",
 						value.size());
 
-				send(fd, headers, header_size,
-				     MSG_DONTWAIT|MSG_MORE|MSG_NOSIGNAL);
-				send(fd, value.data(), value.size(),
-				     MSG_DONTWAIT|MSG_NOSIGNAL);
-
-				/* this avoids resetting the
-				   connection on close() */
-				shutdown(fd, SHUT_WR);
+				if (SendFull(fd, {headers, header_size}) &&
+				    SendFull(fd, {value.data(), value.size()}))
+					/* this avoids resetting the
+					   connection on close() */
+					shutdown(fd, SHUT_WR);
 			} catch (...) {
 				PrintException(std::current_exception());
 			}
