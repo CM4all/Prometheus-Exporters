@@ -34,13 +34,13 @@
 #include "ProcessConfig.hxx"
 #include "ProcessInfo.hxx"
 #include "ProcessIterator.hxx"
+#include "NumberParser.hxx"
 #include "TextFile.hxx"
 #include "io/BufferedOutputStream.hxx"
 #include "io/DirectoryReader.hxx"
 #include "io/Open.hxx"
 #include "io/UniqueFileDescriptor.hxx"
 #include "system/Error.hxx"
-#include "util/CharUtil.hxx"
 #include "util/Compiler.h"
 #include "util/IterableSplitString.hxx"
 #include "util/PrintException.hxx"
@@ -58,38 +58,6 @@ ReadTextFile(FileDescriptor directory_fd, const char *filename)
 	auto value = ReadTextFile(OpenReadOnly(directory_fd, filename),
 				  buffer, buffer_size);
 	return {value.data, value.size};
-}
-
-template<typename T>
-gcc_pure
-static T
-ParseUnsignedT(StringView text) noexcept
-{
-	text.StripLeft();
-
-	T value = 0;
-	for (char ch : text) {
-		if (!IsDigitASCII(ch))
-			break;
-
-		value = value * T(10) + T(ch - '0');
-	}
-
-	return value;
-}
-
-gcc_pure
-static auto
-ParseUnsigned(StringView text) noexcept
-{
-	return ParseUnsignedT<unsigned>(text);
-}
-
-gcc_pure
-static auto
-ParseUnsignedLong(StringView text) noexcept
-{
-	return ParseUnsignedT<unsigned long>(text);
 }
 
 struct ProcessStatus {
