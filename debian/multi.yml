@@ -1,0 +1,3 @@
+sources:
+  - "@cm4all-cgroup-exporter"
+  - "@cm4all-process-exporter"

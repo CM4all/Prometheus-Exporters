@@ -67,10 +67,12 @@ libcommon_enable_c = false
 libcommon_enable_libcap = false
 libcommon_enable_DefaultFifoBuffer = false
 libcommon_enable_net_log = false
+libcommon_enable_event = false
 
 subdir('libcommon/src/util')
 subdir('libcommon/src/pcre')
 subdir('libcommon/src/io')
+subdir('libcommon/src/curl')
 
 executable(
   'cm4all-process-exporter',
@@ -98,6 +100,22 @@ executable(
     libsystemd,
     libyamlcpp,
     io_dep,
+  ],
+  install: true,
+  install_dir: 'sbin',
+)
+
+executable(
+  'cm4all-multi-exporter',
+  'src/MultiExporter.cxx',
+  'src/MultiConfig.cxx',
+  include_directories: inc,
+  dependencies: [
+    libsystemd,
+    libyamlcpp,
+    curl_dep,
+    io_dep,
+    util_dep,
   ],
   install: true,
   install_dir: 'sbin',
