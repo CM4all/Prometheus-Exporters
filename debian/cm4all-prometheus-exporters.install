@@ -1,2 +1,0 @@
-debian/*.service debian/*.socket lib/systemd/system
-debian/*.yml etc/cm4all/prometheus-exporters

@@ -7,3 +7,4 @@
 /build/
 /tmp/
 /cm4all-prometheus-exporters/
+/cm4all-*-exporter/
