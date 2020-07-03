@@ -1,1 +1,2 @@
 debian/cgroup.yml etc/cm4all/prometheus-exporters
+usr/sbin/cm4all-cgroup-exporter
