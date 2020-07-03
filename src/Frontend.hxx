@@ -71,6 +71,14 @@ RunExporterStdio(Handler &&handler)
 }
 
 static bool
+ReceiveDiscard(int fd) noexcept
+{
+	char buffer[8192];
+	ssize_t nbytes = recv(fd, buffer, sizeof(buffer), 0);
+	return nbytes > 0;
+}
+
+static bool
 SendFull(int fd, ConstBuffer<char> buffer) noexcept
 {
 	while (!buffer.empty()) {
@@ -121,8 +129,11 @@ RunExporterHttp(const std::size_t n_listeners, Handler &&handler)
 				continue;
 			}
 
-			/* we never read the HTTP request; just write
-			   the response */
+			/* read the HTTP request (which appears to be
+			   necessary to avoid ECONNRESET), but we
+			   don't evaluate it; we just write the
+			   response */
+			ReceiveDiscard(fd);
 
 			try {
 				StringOutputStream sos;
