@@ -1,7 +1,7 @@
 [Unit]
 
 [Socket]
-ListenStream=@cm4all-process-exporter
+ListenStream=/run/cm4all/prometheus-exporters/process.socket
 
 [Install]
 WantedBy=sockets.target
