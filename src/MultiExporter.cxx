@@ -42,6 +42,9 @@ struct SourceRequest {
 
 	std::string value;
 
+	/** error message provided by libcurl */
+	char error_buffer[CURL_ERROR_SIZE];
+
 	SourceRequest(const MultiExporterConfig::Source &source);
 
 	void Done(CURLcode result);
@@ -81,6 +84,9 @@ SourceRequest::SourceRequest(const MultiExporterConfig::Source &source)
 	curl.SetWriteFunction(CurlWriteFunction, this);
 	curl.SetNoProgress();
 	curl.SetNoSignal();
+
+	error_buffer[0] = 0;
+	curl.SetErrorBuffer(error_buffer);
 }
 
 void
@@ -89,7 +95,11 @@ SourceRequest::Done(CURLcode result)
 	if (result != CURLE_OK) {
 		value.clear();
 
-		throw std::runtime_error(curl_easy_strerror(result));
+		const char *msg = error_buffer;
+		if (*msg == 0)
+			msg = curl_easy_strerror(result);
+
+		throw std::runtime_error(msg);
 	}
 }
 
