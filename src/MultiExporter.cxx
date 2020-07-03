@@ -44,6 +44,8 @@ struct SourceRequest {
 
 	SourceRequest(const MultiExporterConfig::Source &source);
 
+	void Done(CURLcode result);
+
 	void WriteTo(BufferedOutputStream &os) const;
 
 private:
@@ -74,10 +76,21 @@ SourceRequest::SourceRequest(const MultiExporterConfig::Source &source)
 		curl.SetOption(CURLOPT_ABSTRACT_UNIX_SOCKET,
 			       abstract_unix_socket);
 
+	curl.SetPrivate((void *)this);
 	curl.SetFailOnError();
 	curl.SetWriteFunction(CurlWriteFunction, this);
 	curl.SetNoProgress();
 	curl.SetNoSignal();
+}
+
+void
+SourceRequest::Done(CURLcode result)
+{
+	if (result != CURLE_OK) {
+		value.clear();
+
+		throw std::runtime_error(curl_easy_strerror(result));
+	}
 }
 
 void
@@ -111,9 +124,25 @@ ExportMulti(const MultiExporterConfig &config, BufferedOutputStream &os)
 	while (multi.Perform())
 		multi.Wait();
 
-	while (auto msg = multi.InfoRead())
-		if (msg->msg == CURLMSG_DONE)
+	while (auto msg = multi.InfoRead()) {
+		if (msg->msg == CURLMSG_DONE) {
 			multi.Remove(msg->easy_handle);
+
+			void *p;
+			CURLcode code = curl_easy_getinfo(msg->easy_handle,
+							  CURLINFO_PRIVATE,
+							  &p);
+			if (code == CURLE_OK) {
+				auto &request = *(SourceRequest *)p;
+
+				try {
+					request.Done(msg->data.result);
+				} catch (...) {
+					PrintException(std::current_exception());
+				}
+			}
+		}
+	}
 
 	for (const auto &request : requests)
 		request.WriteTo(os);
