@@ -4,7 +4,7 @@ cm4all-prometheus-exporters (0.3) unstable; urgency=low
   * systemd: bind to paths, not to abstract addresses
   * debian: allow building with CURL < 7.53 (Debian Stretch)
 
- --   
+ -- Max Kellermann <mk@cm4all.com>  Fri, 03 Jul 2020 16:09:53 +0200
 
 cm4all-prometheus-exporters (0.2) unstable; urgency=low
 
