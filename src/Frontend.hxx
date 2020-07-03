@@ -78,20 +78,8 @@ ReceiveDiscard(int fd) noexcept
 	return nbytes > 0;
 }
 
-static bool
-SendFull(int fd, ConstBuffer<char> buffer) noexcept
-{
-	while (!buffer.empty()) {
-		ssize_t nbytes = send(fd, buffer.data, buffer.size,
-				      MSG_NOSIGNAL);
-		if (nbytes <= 0)
-			return false;
-
-		buffer.skip_front(nbytes);
-	}
-
-	return true;
-}
+bool
+SendResponse(int fd, ConstBuffer<char> body) noexcept;
 
 template<typename Handler>
 int
@@ -146,17 +134,7 @@ RunExporterHttp(const std::size_t n_listeners, Handler &&handler)
 
 				const auto &value = sos.GetValue();
 
-				char headers[1024];
-				size_t header_size =
-					sprintf(headers, "HTTP/1.1 200 OK\r\n"
-						"connection: close\r\n"
-						"content-type: text/plain\r\n"
-						"content-length: %zu\r\n"
-						"\r\n",
-						value.size());
-
-				if (SendFull(fd, {headers, header_size}) &&
-				    SendFull(fd, {value.data(), value.size()}))
+				if (SendResponse(fd, {value.data(), value.size()}))
 					/* this avoids resetting the
 					   connection on close() */
 					shutdown(fd, SHUT_WR);

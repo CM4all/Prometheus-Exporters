@@ -79,6 +79,7 @@ executable(
   'src/ProcessExporter.cxx',
   'src/ProcessConfig.cxx',
   'src/TextFile.cxx',
+  'src/Frontend.cxx',
   include_directories: inc,
   dependencies: [
     libsystemd,
@@ -95,6 +96,7 @@ executable(
   'src/CgroupExporter.cxx',
   'src/CgroupConfig.cxx',
   'src/TextFile.cxx',
+  'src/Frontend.cxx',
   include_directories: inc,
   dependencies: [
     libsystemd,
@@ -109,6 +111,7 @@ executable(
   'cm4all-multi-exporter',
   'src/MultiExporter.cxx',
   'src/MultiConfig.cxx',
+  'src/Frontend.cxx',
   include_directories: inc,
   dependencies: [
     libsystemd,
