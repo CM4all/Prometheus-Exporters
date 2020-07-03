@@ -37,6 +37,7 @@
 #include "io/BufferedOutputStream.hxx"
 #include "util/ConstBuffer.hxx"
 #include "util/PrintException.hxx"
+#include "util/ScopeExit.hxx"
 
 #include <systemd/sd-daemon.h>
 
@@ -117,6 +118,8 @@ RunExporterHttp(const std::size_t n_listeners, Handler &&handler)
 				continue;
 			}
 
+			AtScopeExit(fd) { close(fd); };
+
 			/* read the HTTP request (which appears to be
 			   necessary to avoid ECONNRESET), but we
 			   don't evaluate it; we just write the
@@ -141,8 +144,6 @@ RunExporterHttp(const std::size_t n_listeners, Handler &&handler)
 			} catch (...) {
 				PrintException(std::current_exception());
 			}
-
-			close(fd);
 		}
 	}
 
