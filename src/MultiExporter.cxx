@@ -33,21 +33,22 @@
 #include "Frontend.hxx"
 #include "MultiConfig.hxx"
 #include "curl/Easy.hxx"
+#include "curl/Multi.hxx"
 
 #include <string>
 
-static size_t
-CurlStringWriteFunction(char *ptr, size_t size, size_t nmemb,
-			void *userdata) noexcept
-{
-	auto &s = *(std::string *)userdata;
-	size_t consumed = size * nmemb;
-	s.append(ptr, consumed);
-	return consumed;
-}
+struct SourceRequest {
+	CurlEasy curl;
 
-static std::string
-LoadSource(const MultiExporterConfig::Source &source)
+	std::string value;
+
+	SourceRequest(const MultiExporterConfig::Source &source);
+
+	static size_t CurlWriteFunction(char *ptr, size_t size, size_t nmemb,
+					void *userdata) noexcept;
+};
+
+SourceRequest::SourceRequest(const MultiExporterConfig::Source &source)
 {
 	const char *url = source.uri.c_str();
 	const char *unix_socket_path = nullptr;
@@ -61,9 +62,7 @@ LoadSource(const MultiExporterConfig::Source &source)
 		url = "http://abstract-socket.dummy/";
 	}
 
-	std::string result;
-
-	CurlEasy curl(url);
+	curl.SetURL(url);
 
 	if (unix_socket_path != nullptr)
 		curl.SetOption(CURLOPT_UNIX_SOCKET_PATH, unix_socket_path);
@@ -73,26 +72,42 @@ LoadSource(const MultiExporterConfig::Source &source)
 			       abstract_unix_socket);
 
 	curl.SetFailOnError();
-	curl.SetWriteFunction(CurlStringWriteFunction, &result);
+	curl.SetWriteFunction(CurlWriteFunction, this);
 	curl.SetNoProgress();
 	curl.SetNoSignal();
-	curl.Perform();
+}
 
-	return result;
+size_t
+SourceRequest::CurlWriteFunction(char *ptr, size_t size, size_t nmemb,
+				 void *userdata) noexcept
+{
+	auto &sr = *(SourceRequest *)userdata;
+	size_t consumed = size * nmemb;
+	sr.value.append(ptr, consumed);
+	return consumed;
 }
 
 static void
 ExportMulti(const MultiExporterConfig &config, BufferedOutputStream &os)
 {
-	// TODO: parallelize this
+	CurlMulti multi;
+	std::forward_list<SourceRequest> requests;
+
+	auto e = requests.before_begin();
 	for (const auto &i : config.sources) {
-		try {
-			auto s = LoadSource(i);
-			os.Write(s.data(), s.size());
-		} catch (...) {
-			PrintException(std::current_exception());
-		}
+		e = requests.emplace_after(e, i);
+		multi.Add(e->curl.Get());
 	}
+
+	while (multi.Perform())
+		multi.Wait();
+
+	while (auto msg = multi.InfoRead())
+		if (msg->msg == CURLMSG_DONE)
+			multi.Remove(msg->easy_handle);
+
+	for (const auto &request : requests)
+		os.Write(request.value.data(), request.value.size());
 }
 
 int
