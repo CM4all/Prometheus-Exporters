@@ -33,6 +33,7 @@
 #include "Frontend.hxx"
 #include "MultiConfig.hxx"
 #include "curl/Easy.hxx"
+#include "curl/Init.hxx"
 #include "curl/Multi.hxx"
 
 #include <string>
@@ -171,6 +172,8 @@ try {
 	}
 
 	const auto config = LoadMultiExporterConfig(config_file);
+
+	const ScopeCurlInit curl_init;
 
 	return RunExporter([&](BufferedOutputStream &os){
 		ExportMulti(config, os);
