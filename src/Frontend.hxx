@@ -71,13 +71,12 @@ RunExporterStdio(Handler &&handler)
 	return result;
 }
 
-static bool
-ReceiveDiscard(int fd) noexcept
-{
-	char buffer[8192];
-	ssize_t nbytes = recv(fd, buffer, sizeof(buffer), 0);
-	return nbytes > 0;
-}
+struct FrontendRequest {
+	bool valid = false;
+};
+
+FrontendRequest
+ReceiveFrontendRequest(int fd) noexcept;
 
 bool
 SendResponse(int fd, ConstBuffer<char> body) noexcept;
@@ -124,7 +123,9 @@ RunExporterHttp(const std::size_t n_listeners, Handler &&handler)
 			   necessary to avoid ECONNRESET), but we
 			   don't evaluate it; we just write the
 			   response */
-			ReceiveDiscard(fd);
+			const auto request = ReceiveFrontendRequest(fd);
+			if (!request.valid)
+				continue;
 
 			try {
 				StringOutputStream sos;

@@ -32,6 +32,21 @@
 
 #include "Frontend.hxx"
 
+FrontendRequest
+ReceiveFrontendRequest(int fd) noexcept
+{
+	FrontendRequest request;
+
+	char buffer[8192];
+	ssize_t nbytes = recv(fd, buffer, sizeof(buffer), 0);
+	if (nbytes <= 0)
+		return request;
+
+	request.valid = true;
+	return request;
+
+}
+
 static bool
 SendFull(int fd, ConstBuffer<char> buffer) noexcept
 {
