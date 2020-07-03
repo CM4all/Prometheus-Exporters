@@ -70,9 +70,12 @@ libcommon_enable_net_log = false
 libcommon_enable_event = false
 
 subdir('libcommon/src/util')
+subdir('libcommon/src/time')
+subdir('libcommon/src/http')
 subdir('libcommon/src/pcre')
 subdir('libcommon/src/io')
 subdir('libcommon/src/curl')
+subdir('libcommon/src/zlib')
 
 frontend = static_library(
   'frontend',
@@ -80,11 +83,16 @@ frontend = static_library(
   include_directories: inc,
   dependencies: [
     io_dep,
+    zlib_dep,
+    http_dep,
   ],
 )
 
 frontend_dep = declare_dependency(
   link_with: frontend,
+  dependencies: [
+    zlib_dep,
+  ],
 )
 
 executable(

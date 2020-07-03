@@ -31,6 +31,9 @@
  */
 
 #include "Frontend.hxx"
+#include "http/List.hxx"
+#include "util/IterableSplitString.hxx"
+#include "util/StringCompare.hxx"
 
 FrontendRequest
 ReceiveFrontendRequest(int fd) noexcept
@@ -43,6 +46,17 @@ ReceiveFrontendRequest(int fd) noexcept
 		return request;
 
 	request.valid = true;
+
+	const StringView raw(buffer, nbytes);
+
+	for (const auto line : IterableSplitString(raw, '\n')) {
+		auto ae = StringAfterPrefixIgnoreCase(line, "accept-encoding:");
+		if (!ae.IsNull()) {
+			if (http_list_contains(ae, "gzip"))
+				request.gzip = true;
+		}
+	}
+
 	return request;
 
 }
@@ -63,15 +77,17 @@ SendFull(int fd, ConstBuffer<char> buffer) noexcept
 }
 
 bool
-SendResponse(int fd, ConstBuffer<char> body) noexcept
+SendResponse(int fd, bool gzip, ConstBuffer<char> body) noexcept
 {
 	char headers[1024];
 	size_t header_size =
 		sprintf(headers, "HTTP/1.1 200 OK\r\n"
 			"connection: close\r\n"
+			"%s"
 			"content-type: text/plain\r\n"
 			"content-length: %zu\r\n"
 			"\r\n",
+			gzip ? "content-encoding: gzip\r\n" : "",
 			body.size);
 
 	return SendFull(fd, {headers, header_size}) &&

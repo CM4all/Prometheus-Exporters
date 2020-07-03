@@ -35,6 +35,7 @@
 #include "io/StdioOutputStream.hxx"
 #include "io/StringOutputStream.hxx"
 #include "io/BufferedOutputStream.hxx"
+#include "zlib/GzipOutputStream.hxx"
 #include "util/ConstBuffer.hxx"
 #include "util/PrintException.hxx"
 #include "util/ScopeExit.hxx"
@@ -73,13 +74,15 @@ RunExporterStdio(Handler &&handler)
 
 struct FrontendRequest {
 	bool valid = false;
+
+	bool gzip = false;
 };
 
 FrontendRequest
 ReceiveFrontendRequest(int fd) noexcept;
 
 bool
-SendResponse(int fd, ConstBuffer<char> body) noexcept;
+SendResponse(int fd, bool gzip, ConstBuffer<char> body) noexcept;
 
 template<typename Handler>
 int
@@ -130,7 +133,13 @@ RunExporterHttp(const std::size_t n_listeners, Handler &&handler)
 			try {
 				StringOutputStream sos;
 
-				{
+				if (request.gzip) {
+					GzipOutputStream zos(sos);
+					BufferedOutputStream bos(zos);
+					handler(bos);
+					bos.Flush();
+					zos.Finish();
+				} else  {
 					BufferedOutputStream bos(sos);
 					handler(bos);
 					bos.Flush();
@@ -138,7 +147,8 @@ RunExporterHttp(const std::size_t n_listeners, Handler &&handler)
 
 				const auto &value = sos.GetValue();
 
-				if (SendResponse(fd, {value.data(), value.size()}))
+				if (SendResponse(fd, request.gzip,
+						 {value.data(), value.size()}))
 					/* this avoids resetting the
 					   connection on close() */
 					shutdown(fd, SHUT_WR);
