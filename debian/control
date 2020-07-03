@@ -47,6 +47,7 @@ Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends},
  systemd (>= 232~)
 Recommends: libnss-systemd
+Suggests: cm4all-cgroup-exporter, cm4all-process-exporter
 Description: Exporter which concatenates multiple exporters
  Contains a Prometheus exporter which concatenates the outputs of
  multiple other exporters.
