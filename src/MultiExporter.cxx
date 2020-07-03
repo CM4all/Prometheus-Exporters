@@ -61,14 +61,20 @@ SourceRequest::SourceRequest(const MultiExporterConfig::Source &source)
 {
 	const char *url = source.uri.c_str();
 	const char *unix_socket_path = nullptr;
+#if LIBCURL_VERSION_NUM >= 0x073500
 	const char *abstract_unix_socket = nullptr;
+#endif
 
 	if (*url == '/') {
 		unix_socket_path = url;
 		url = "http://local-socket.dummy/";
 	} else if (*url == '@') {
+#if LIBCURL_VERSION_NUM >= 0x073500
 		abstract_unix_socket = url + 1;
 		url = "http://abstract-socket.dummy/";
+#else
+		throw std::runtime_error("This CURL version does not support abstract sockets");
+#endif
 	}
 
 	curl.SetURL(url);
@@ -76,9 +82,11 @@ SourceRequest::SourceRequest(const MultiExporterConfig::Source &source)
 	if (unix_socket_path != nullptr)
 		curl.SetOption(CURLOPT_UNIX_SOCKET_PATH, unix_socket_path);
 
+#if LIBCURL_VERSION_NUM >= 0x073500
 	if (abstract_unix_socket != nullptr)
 		curl.SetOption(CURLOPT_ABSTRACT_UNIX_SOCKET,
 			       abstract_unix_socket);
+#endif
 
 	curl.SetPrivate((void *)this);
 	curl.SetFailOnError();

@@ -7,7 +7,7 @@ Build-Depends: debhelper (>= 12~),
  g++ (>= 6~),
  zlib1g-dev,
  libboost-dev (>= 1.56),
- libcurl4-openssl-dev (>= 7.53),
+ libcurl4-openssl-dev (>= 7.40),
  libyaml-cpp-dev,
  libpcre3-dev,
  libsystemd-dev
