@@ -74,18 +74,30 @@ subdir('libcommon/src/pcre')
 subdir('libcommon/src/io')
 subdir('libcommon/src/curl')
 
+frontend = static_library(
+  'frontend',
+  'src/Frontend.cxx',
+  include_directories: inc,
+  dependencies: [
+    io_dep,
+  ],
+)
+
+frontend_dep = declare_dependency(
+  link_with: frontend,
+)
+
 executable(
   'cm4all-process-exporter',
   'src/ProcessExporter.cxx',
   'src/ProcessConfig.cxx',
   'src/TextFile.cxx',
-  'src/Frontend.cxx',
   include_directories: inc,
   dependencies: [
     libsystemd,
     libyamlcpp,
-    io_dep,
     pcre_dep,
+    frontend_dep,
   ],
   install: true,
   install_dir: 'sbin',
@@ -96,12 +108,11 @@ executable(
   'src/CgroupExporter.cxx',
   'src/CgroupConfig.cxx',
   'src/TextFile.cxx',
-  'src/Frontend.cxx',
   include_directories: inc,
   dependencies: [
     libsystemd,
     libyamlcpp,
-    io_dep,
+    frontend_dep,
   ],
   install: true,
   install_dir: 'sbin',
@@ -111,13 +122,12 @@ executable(
   'cm4all-multi-exporter',
   'src/MultiExporter.cxx',
   'src/MultiConfig.cxx',
-  'src/Frontend.cxx',
   include_directories: inc,
   dependencies: [
     libsystemd,
     libyamlcpp,
     curl_dep,
-    io_dep,
+    frontend_dep,
     util_dep,
   ],
   install: true,
