@@ -24,6 +24,7 @@ Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends},
  systemd (>= 232~)
 Recommends: libnss-systemd
+Replaces: cm4all-prometheus-exporters
 Description: Prometheus Exporter for cgroup statistics
  Contains a Prometheus exporter which exposes cgroup statistics, such
  as per-cgroup CPU and memory usage.
@@ -33,6 +34,7 @@ Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends},
  systemd (>= 232~)
 Recommends: libnss-systemd
+Replaces: cm4all-prometheus-exporters
 Description: Prometheus Exporter for cgroup statistics
  Contains a Prometheus exporter which exposes cgroup statistics, such
  as per-cgroup CPU and memory usage.
