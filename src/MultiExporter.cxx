@@ -44,6 +44,9 @@ struct SourceRequest {
 
 	SourceRequest(const MultiExporterConfig::Source &source);
 
+	void WriteTo(BufferedOutputStream &os) const;
+
+private:
 	static size_t CurlWriteFunction(char *ptr, size_t size, size_t nmemb,
 					void *userdata) noexcept;
 };
@@ -77,6 +80,12 @@ SourceRequest::SourceRequest(const MultiExporterConfig::Source &source)
 	curl.SetNoSignal();
 }
 
+void
+SourceRequest::WriteTo(BufferedOutputStream &os) const
+{
+	os.Write(value.data(), value.size());
+}
+
 size_t
 SourceRequest::CurlWriteFunction(char *ptr, size_t size, size_t nmemb,
 				 void *userdata) noexcept
@@ -107,7 +116,7 @@ ExportMulti(const MultiExporterConfig &config, BufferedOutputStream &os)
 			multi.Remove(msg->easy_handle);
 
 	for (const auto &request : requests)
-		os.Write(request.value.data(), request.value.size());
+		request.WriteTo(os);
 }
 
 int
