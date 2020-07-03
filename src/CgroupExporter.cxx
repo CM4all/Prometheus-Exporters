@@ -88,9 +88,9 @@ static void
 ForEachTextLine(FileDescriptor directory_fd, const char *filename, F &&f)
 {
 	char buffer[4096];
-	const auto s = ReadTextFile(directory_fd, filename, buffer, sizeof(buffer));
+	const auto contents = ReadTextFile(directory_fd, filename, buffer, sizeof(buffer));
 
-	for (StringView i : IterableSplitString(s, '\n')) {
+	for (StringView i : IterableSplitString(contents, '\n')) {
 		i.Strip();
 		f(i);
 	}
