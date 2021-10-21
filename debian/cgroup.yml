@@ -8,6 +8,8 @@ opaque_paths:
   - system.slice/system-systemd\x2dfsck.slice
   - system.slice/system-ssh.slice
   - system.slice/system-cm4all\x2dspawn\x2dnetns.slice
+  - system.slice/system-cm4all\x2dostree\x2dmake.slice
+  - system.slice/system-cm4all\x2dostree\x2dserver.slice
   - system.slice/system-serial\x2dgetty.slice
   - user.slice
 ignore_names:
