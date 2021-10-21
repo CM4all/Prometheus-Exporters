@@ -30,7 +30,6 @@ test_common_flags = [
   '-Wundef',
   '-Wunused',
   '-Wwrite-strings',
-  '-Wno-long-long',
 ]
 
 test_global_common_flags = [
