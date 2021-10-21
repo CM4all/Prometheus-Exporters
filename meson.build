@@ -26,18 +26,20 @@ test_common_flags = [
   '-fvisibility=hidden',
 ]
 
-test_common_flags += [
-  '-ffunction-sections',
-  '-fdata-sections',
-]
+if not debug
+  test_common_flags += [
+    '-ffunction-sections',
+    '-fdata-sections',
+  ]
 
-add_global_link_arguments(
-  compiler.get_supported_link_arguments(
-    '-Wl,--gc-sections',
-    '-Wl,--icf=all',
-  ),
-  language: 'cpp'
-)
+  add_global_link_arguments(
+    compiler.get_supported_link_arguments(
+      '-Wl,--gc-sections',
+      '-Wl,--icf=all',
+    ),
+    language: 'cpp'
+  )
+endif
 
 test_cxxflags = test_common_flags + [
   '-fno-threadsafe-statics',
