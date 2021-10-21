@@ -16,15 +16,21 @@ compiler = meson.get_compiler('cpp')
 
 common_flags = [
   '-D_GNU_SOURCE',
-  '-Wwrite-strings', '-Wcast-qual', '-Wcast-align', '-Wfloat-equal',
-  '-Wshadow',
-  '-Wmissing-declarations', '-Wmissing-noreturn', '-Wmissing-format-attribute',
-  '-Wredundant-decls', '-Wno-long-long', '-Wundef',
-  '-Wunused',
-  '-Wundef',
 ]
 
 test_common_flags = [
+  '-Wcast-align',
+  '-Wcast-qual',
+  '-Wfloat-equal',
+  '-Wmissing-declarations',
+  '-Wmissing-format-attribute',
+  '-Wmissing-noreturn',
+  '-Wredundant-decls',
+  '-Wshadow',
+  '-Wundef',
+  '-Wunused',
+  '-Wwrite-strings',
+  '-Wno-long-long',
 ]
 
 test_global_common_flags = [
