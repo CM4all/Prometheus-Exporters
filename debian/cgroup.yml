@@ -12,6 +12,7 @@ opaque_paths:
   - system.slice/system-cm4all\x2dostree\x2dmake.slice
   - system.slice/system-cm4all\x2dostree\x2dserver.slice
   - system.slice/system-serial\x2dgetty.slice
+  - system.slice/system-postfix.slice
   - user.slice
 ignore_names:
   - "*.mount"
