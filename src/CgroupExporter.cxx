@@ -65,6 +65,13 @@ ParseUserHz(StringView text)
 	return ParseUint64(text) * user_hz_to_seconds;
 }
 
+static inline auto
+ParseUsec(StringView text)
+{
+	static constexpr double usec_to_seconds = 0.000001;
+	return ParseUint64(text) * usec_to_seconds;
+}
+
 static int64_t
 ReadUint64File(FileDescriptor directory_fd, const char *filename)
 {
@@ -113,6 +120,7 @@ struct CgroupCpuacctValues {
 
 struct CgroupMemoryValues {
 	int64_t usage = -1, kmem_usage = -1, memsw_usage = -1;
+	int64_t swap_usage = -1;
 	int64_t failcnt = -1, kmem_failfnt = -1, memsw_failcnt = -1;
 	std::map<std::string, uint64_t> stat;
 };
@@ -280,20 +288,40 @@ WalkContext::HandleRegularFile(FileDescriptor parent_fd, const char *base)
 	static constexpr double nano_factor = 1e-9;
 
 	if (StringIsEqual(base, "cpuacct.usage")) {
+		// cgroup1
 		group.cpuacct.usage = ReadDoubleFile(parent_fd, base,
 						     nano_factor);
 	} else if (StringIsEqual(base, "cpuacct.stat")) {
+		// cgroup1
 		ForEachNameValue(parent_fd, base, [&group](auto name, auto value){
 			if (name.Equals("user"))
 				group.cpuacct.user = ParseUserHz(value);
 			else if (name.Equals("system"))
 				group.cpuacct.system = ParseUserHz(value);
 		});
-	} else if (StringIsEqual(base, "memory.usage_in_bytes")) {
+	} else if (StringIsEqual(base, "cpu.stat")) {
+		// cgroup2
+		ForEachNameValue(parent_fd, base, [&group](auto name, auto value){
+			if (name.Equals("usage_usec"))
+				group.cpuacct.usage = ParseUsec(value);
+			else if (name.Equals("user_usec"))
+				group.cpuacct.user = ParseUsec(value);
+			else if (name.Equals("system_usec"))
+				group.cpuacct.system = ParseUsec(value);
+		});
+	} else if (/* cgroup1 */
+		   StringIsEqual(base, "memory.usage_in_bytes") ||
+		   /* cgroup2 */
+		   StringIsEqual(base, "memory.current")) {
 		group.memory.usage = ReadUint64File(parent_fd, base);
+	} else if (StringIsEqual(base, "memory.swap.current")) {
+		// cgroup2
+		group.memory.swap_usage = ReadUint64File(parent_fd, base);
 	} else if (StringIsEqual(base, "memory.kmem.usage_in_bytes")) {
+		// cgroup1
 		group.memory.kmem_usage = ReadUint64File(parent_fd, base);
 	} else if (StringIsEqual(base, "memory.memsw.usage_in_bytes")) {
+		// cgroup1
 		group.memory.memsw_usage = ReadUint64File(parent_fd, base);
 	} else if (StringIsEqual(base, "memory.stat")) {
 		ForEachNameValue(parent_fd, base, [&group](auto name, auto value){
@@ -343,7 +371,7 @@ WalkContext::DoWalk(UniqueFileDescriptor directory_fd)
 }
 
 static auto
-CollectCgroup(const CgroupExporterConfig &config)
+CollectCgroup1(const CgroupExporterConfig &config)
 {
 	CgroupsData data;
 
@@ -358,6 +386,37 @@ CollectCgroup(const CgroupExporterConfig &config)
 	}
 
 	return data;
+}
+
+static auto
+CollectCgroup2(const CgroupExporterConfig &config)
+{
+	CgroupsData data;
+
+	try {
+		WalkContext ctx(config, data);
+		ctx.DoWalk(OpenDirectory(FileDescriptor(AT_FDCWD), "/sys/fs/cgroup"));
+	} catch (...) {
+		PrintException(std::current_exception());
+	}
+
+	return data;
+}
+
+[[gnu::pure]]
+static bool
+HasCgroup2() noexcept
+{
+	struct stat st;
+	return stat("/sys/fs/cgroup/cgroup.subtree_control", &st) == 0;
+}
+
+static auto
+CollectCgroup(const CgroupExporterConfig &config)
+{
+	return HasCgroup2()
+		? CollectCgroup2(config)
+		: CollectCgroup1(config);
 }
 
 static void
@@ -473,6 +532,7 @@ DumpCgroup(BufferedOutputStream &os, const CgroupsData &data)
 		const char *group = i.first.c_str();
 		const auto &memory = i.second.memory;
 		WriteMemory(os, group, "total", memory.usage);
+		WriteMemory(os, group, "swap", memory.swap_usage);
 		WriteMemory(os, group, "kmem.total", memory.kmem_usage);
 		WriteMemory(os, group, "memsw.total", memory.memsw_usage);
 
