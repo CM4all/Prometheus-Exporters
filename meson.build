@@ -25,11 +25,14 @@ common_flags = [
 ]
 
 test_common_flags = [
+]
+
+test_global_common_flags = [
   '-fvisibility=hidden',
 ]
 
 if not debug
-  test_common_flags += [
+  test_global_common_flags += [
     '-ffunction-sections',
     '-fdata-sections',
   ]
@@ -43,6 +46,9 @@ if not debug
   )
 endif
 
+test_global_cxxflags = test_global_common_flags + [
+]
+
 test_cxxflags = test_common_flags + [
   '-fno-threadsafe-statics',
   '-fmerge-all-constants',
@@ -53,7 +59,8 @@ test_cxxflags = test_common_flags + [
 
 add_global_arguments(common_flags, language: 'cpp')
 
-add_global_arguments(compiler.get_supported_arguments(test_cxxflags), language: 'cpp')
+add_global_arguments(compiler.get_supported_arguments(test_global_cxxflags), language: 'cpp')
+add_project_arguments(compiler.get_supported_arguments(test_cxxflags), language: 'cpp')
 
 libsystemd = dependency('libsystemd')
 
