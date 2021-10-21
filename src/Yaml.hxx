@@ -30,41 +30,16 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "CgroupConfig.hxx"
-#include "Yaml.hxx"
+#pragma once
 
-#include <fnmatch.h>
+#ifdef __clang__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wfloat-equal"
+#pragma GCC diagnostic ignored "-Wshadow"
+#endif
 
-bool
-CgroupExporterConfig::CheckIgnoreName(const char *name) const noexcept
-{
-	for (const auto &i : ignore_names)
-		if (fnmatch(i.c_str(), name, 0) == 0)
-			return true;
+#include <yaml-cpp/yaml.h>
 
-	return false;
-}
-
-static auto
-LoadCgroupExporterConfig(const YAML::Node &node)
-{
-	CgroupExporterConfig config;
-
-	const auto ops = node["opaque_paths"];
-	if (ops && ops.IsSequence())
-		for (const auto &i : ops)
-			config.opaque_paths.emplace(i.as<std::string>());
-
-	const auto ins = node["ignore_names"];
-	if (ins && ins.IsSequence())
-		for (const auto &i : ins)
-			config.ignore_names.emplace(i.as<std::string>());
-
-	return config;
-}
-
-CgroupExporterConfig
-LoadCgroupExporterConfig(const char *path)
-{
-	return LoadCgroupExporterConfig(YAML::LoadFile(path));
-}
+#ifdef __clang__
+#pragma GCC diagnostic pop
+#endif

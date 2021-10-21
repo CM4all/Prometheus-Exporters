@@ -32,8 +32,7 @@
 
 #include "ProcessConfig.hxx"
 #include "ProcessInfo.hxx"
-
-#include <yaml-cpp/yaml.h>
+#include "Yaml.hxx"
 
 bool
 ProcessNameConfig::Match(const ProcessInfo &info) const noexcept

@@ -31,8 +31,7 @@
  */
 
 #include "MultiConfig.hxx"
-
-#include <yaml-cpp/yaml.h>
+#include "Yaml.hxx"
 
 #include <stdexcept>
 

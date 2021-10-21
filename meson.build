@@ -3,6 +3,10 @@ project('CM4all Prometheus Exporters', ['cpp'], version: '0.4',
   default_options: [
     'cpp_std=c++17',
     'warning_level=3',
+
+    # Not interested in compiler warnings from subprojects.
+    'yaml-cpp:werror=false',
+    'yaml-cpp:warning_level=0',
   ],
 )
 
