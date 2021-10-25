@@ -2,7 +2,7 @@ cm4all-prometheus-exporters (0.4) unstable; urgency=low
 
   * CgroupExporter: cgroup2 support
 
- --   
+ -- Max Kellermann <mk@cm4all.com>  Mon, 25 Oct 2021 23:50:37 +0200
 
 cm4all-prometheus-exporters (0.3) unstable; urgency=low
 
