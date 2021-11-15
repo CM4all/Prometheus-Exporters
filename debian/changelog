@@ -2,7 +2,7 @@ cm4all-prometheus-exporters (0.5) unstable; urgency=low
 
   * KernelExporter: new exporter
 
- --   
+ -- Max Kellermann <mk@cm4all.com>  Mon, 15 Nov 2021 12:28:37 +0100
 
 cm4all-prometheus-exporters (0.4) unstable; urgency=low
 
