@@ -34,6 +34,7 @@
 #include "http/List.hxx"
 #include "util/IterableSplitString.hxx"
 #include "util/StringCompare.hxx"
+#include "util/StringView.hxx"
 
 FrontendRequest
 ReceiveFrontendRequest(int fd) noexcept

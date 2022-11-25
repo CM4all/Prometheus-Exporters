@@ -44,11 +44,14 @@
 #include "util/Compiler.h"
 #include "util/IterableSplitString.hxx"
 #include "util/PrintException.hxx"
-#include "util/StringView.hxx"
+#include "util/StringCompare.hxx"
+#include "util/StringStrip.hxx"
 
 #include <algorithm>
 #include <cstdlib>
 #include <unordered_map>
+
+using std::string_view_literals::operator""sv;
 
 template<std::size_t buffer_size>
 std::string
@@ -66,23 +69,23 @@ struct ProcessStatus {
 };
 
 static auto
-ParseProcessStatus(StringView text)
+ParseProcessStatus(std::string_view text)
 {
 	ProcessStatus result;
 
 	for (auto line : IterableSplitString(text, '\n')) {
-		line.Strip();
+		line = Strip(line);
 		if (line.empty())
 			continue;
 
 		switch (line.front()) {
 		case 'n':
-			if (line.SkipPrefix("nonvoluntary_ctxt_switches:"))
+			if (SkipPrefix(line, "nonvoluntary_ctxt_switches:"sv))
 				result.nonvoluntary_ctxt_switches = ParseUnsigned(line);
 			break;
 
 		case 'v':
-			if (line.SkipPrefix("voluntary_ctxt_switches:"))
+			if (SkipPrefix(line, "voluntary_ctxt_switches:"sv))
 				result.voluntary_ctxt_switches = ParseUnsigned(line);
 			break;
 		}
