@@ -51,7 +51,7 @@ ReceiveFrontendRequest(int fd) noexcept
 
 	for (const auto line : IterableSplitString(raw, '\n')) {
 		auto ae = StringAfterPrefixIgnoreCase(line, "accept-encoding:");
-		if (!ae.IsNull()) {
+		if (ae.data() != nullptr) {
 			if (http_list_contains(ae, "gzip"))
 				request.gzip = true;
 		}
