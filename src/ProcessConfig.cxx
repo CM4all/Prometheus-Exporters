@@ -49,7 +49,7 @@ ProcessNameConfig::Match(const ProcessInfo &info) const noexcept
 			return false;
 	}
 
-	const StringView c = {info.cmdline.data(), info.cmdline.size()};
+	const std::string_view c = info.cmdline;
 	for (const auto &i : cmdline)
 		if (!i.Match(c))
 			return false;
