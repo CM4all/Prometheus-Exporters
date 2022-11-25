@@ -35,7 +35,7 @@
 #include "io/StdioOutputStream.hxx"
 #include "io/StringOutputStream.hxx"
 #include "io/BufferedOutputStream.hxx"
-#include "zlib/GzipOutputStream.hxx"
+#include "lib/zlib/GzipOutputStream.hxx"
 #include "util/ConstBuffer.hxx"
 #include "util/PrintException.hxx"
 #include "util/ScopeExit.hxx"

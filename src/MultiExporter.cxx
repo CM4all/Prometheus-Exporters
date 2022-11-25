@@ -32,9 +32,9 @@
 
 #include "Frontend.hxx"
 #include "MultiConfig.hxx"
-#include "curl/Easy.hxx"
-#include "curl/Init.hxx"
-#include "curl/Multi.hxx"
+#include "lib/curl/Easy.hxx"
+#include "lib/curl/Init.hxx"
+#include "lib/curl/Multi.hxx"
 
 #include <string>
 

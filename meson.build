@@ -104,10 +104,10 @@ libcommon_enable_event = false
 subdir('libcommon/src/util')
 subdir('libcommon/src/time')
 subdir('libcommon/src/http')
-subdir('libcommon/src/pcre')
+subdir('libcommon/src/lib/pcre')
 subdir('libcommon/src/io')
-subdir('libcommon/src/curl')
-subdir('libcommon/src/zlib')
+subdir('libcommon/src/lib/curl')
+subdir('libcommon/src/lib/zlib')
 
 frontend = static_library(
   'frontend',

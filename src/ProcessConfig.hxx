@@ -32,7 +32,7 @@
 
 #pragma once
 
-#include "pcre/Regex.hxx"
+#include "lib/pcre/UniqueRegex.hxx"
 
 #include <forward_list>
 #include <set>
