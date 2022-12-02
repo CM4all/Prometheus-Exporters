@@ -41,7 +41,6 @@
 #include "io/Open.hxx"
 #include "io/UniqueFileDescriptor.hxx"
 #include "system/Error.hxx"
-#include "util/Compiler.h"
 #include "util/IterableSplitString.hxx"
 #include "util/PrintException.hxx"
 #include "util/StringCompare.hxx"

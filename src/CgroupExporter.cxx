@@ -75,7 +75,7 @@ ReadUint64File(FileDescriptor directory_fd, const char *filename)
 	return ParseUint64(s);
 }
 
-gcc_pure
+[[gnu::pure]]
 static double
 ReadDoubleFile(FileDescriptor directory_fd, const char *filename,
 	       double factor=1.0)

@@ -41,7 +41,7 @@
 #include <utility>
 
 template<typename T>
-gcc_pure
+[[gnu::pure]]
 T
 ParseUnsignedT(std::string_view text) noexcept
 {
@@ -58,28 +58,28 @@ ParseUnsignedT(std::string_view text) noexcept
 	return value;
 }
 
-gcc_pure
+[[gnu::pure]]
 inline auto
 ParseUnsigned(std::string_view text) noexcept
 {
 	return ParseUnsignedT<unsigned>(text);
 }
 
-gcc_pure
+[[gnu::pure]]
 inline auto
 ParseUnsignedLong(std::string_view text) noexcept
 {
 	return ParseUnsignedT<unsigned long>(text);
 }
 
-gcc_pure
+[[gnu::pure]]
 inline auto
 ParseUint64(std::string_view text) noexcept
 {
 	return ParseUnsignedT<uint64_t>(text);
 }
 
-gcc_pure
+[[gnu::pure]]
 inline double
 ParseDouble(std::string_view text) noexcept
 {

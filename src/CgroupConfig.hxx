@@ -32,8 +32,6 @@
 
 #pragma once
 
-#include "util/Compiler.h"
-
 #include <set>
 #include <string>
 
@@ -42,7 +40,7 @@ struct CgroupExporterConfig {
 
 	std::set<std::string> ignore_names;
 
-	gcc_pure
+	[[gnu::pure]]
 	bool CheckIgnoreName(const char *name) const noexcept;
 };
 
