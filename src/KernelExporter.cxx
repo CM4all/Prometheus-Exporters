@@ -32,13 +32,11 @@
 
 #include "Frontend.hxx"
 #include "CgroupConfig.hxx"
-#include "TextFile.hxx"
 #include "NumberParser.hxx"
 #include "io/BufferedOutputStream.hxx"
 #include "io/DirectoryReader.hxx"
 #include "io/FileAt.hxx"
-#include "io/Open.hxx"
-#include "io/UniqueFileDescriptor.hxx"
+#include "io/SmallTextFile.hxx"
 #include "util/IterableSplitString.hxx"
 #include "util/PrintException.hxx"
 #include "util/StringCompare.hxx"
@@ -57,12 +55,8 @@
 using std::string_view_literals::operator""sv;
 
 static void
-ExportLoadAverage(BufferedOutputStream &os)
+ExportLoadAverage(BufferedOutputStream &os, std::string_view s)
 {
-	char buffer[267];
-	auto s = ReadTextFile({FileDescriptor{AT_FDCWD}, "/proc/loadavg"},
-			      buffer, sizeof(buffer));
-
 	os.Write(R"(# HELP loadavg Load average.
 # TYPE loadavg gauge
 )");
@@ -83,12 +77,8 @@ loadavg{period="15m"} %e
 }
 
 static void
-ExportMemInfo(BufferedOutputStream &os)
+ExportMemInfo(BufferedOutputStream &os, std::string_view s)
 {
-	char buffer[8192];
-	auto s = ReadTextFile({FileDescriptor{AT_FDCWD}, "/proc/meminfo"},
-			      buffer, sizeof(buffer));
-
 	os.Write(R"(# HELP meminfo Kernel memory info
 # TYPE meminfo gauge
 )");
@@ -113,12 +103,8 @@ ExportMemInfo(BufferedOutputStream &os)
 }
 
 static void
-ExportVmStat(BufferedOutputStream &os)
+ExportVmStat(BufferedOutputStream &os, std::string_view s)
 {
-	char buffer[16384];
-	auto s = ReadTextFile({FileDescriptor{AT_FDCWD}, "/proc/vmstat"},
-			      buffer, sizeof(buffer));
-
 	os.Write(R"(# HELP vmstat
 # TYPE vmstat untyped
 )");
@@ -132,12 +118,22 @@ ExportVmStat(BufferedOutputStream &os)
 	}
 }
 
+template<std::size_t buffer_size>
+static void
+Export(BufferedOutputStream &os, auto &&file,
+       Invocable<BufferedOutputStream &, std::string_view> auto f)
+{
+	WithSmallTextFile<buffer_size>(file, [&](std::string_view contents){
+		f(os, contents);
+	});
+}
+
 static void
 ExportKernel(BufferedOutputStream &os)
 {
-	ExportLoadAverage(os);
-	ExportMemInfo(os);
-	ExportVmStat(os);
+	Export<256>(os, "/proc/loadavg", ExportLoadAverage);
+	Export<8192>(os, "/proc/meminfo", ExportMemInfo);
+	Export<16384>(os, "/proc/vmstat", ExportVmStat);
 }
 
 int

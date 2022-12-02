@@ -32,12 +32,12 @@
 
 #include "Frontend.hxx"
 #include "CgroupConfig.hxx"
-#include "TextFile.hxx"
 #include "NumberParser.hxx"
 #include "io/BufferedOutputStream.hxx"
 #include "io/DirectoryReader.hxx"
 #include "io/FileAt.hxx"
 #include "io/Open.hxx"
+#include "io/SmallTextFile.hxx"
 #include "io/UniqueFileDescriptor.hxx"
 #include "util/Concepts.hxx"
 #include "util/IterableSplitString.hxx"
@@ -70,37 +70,24 @@ ParseUsec(std::string_view text)
 }
 
 static int64_t
-ReadUint64File(FileAt file)
+ReadUint64File(auto &&file)
 {
-	char buffer[64];
-	auto s = ReadTextFile(file, buffer, sizeof(buffer));
-	return ParseUint64(s);
+	return WithSmallTextFile<64>(file, ParseUint64);
 }
 
 [[gnu::pure]]
 static double
 ReadDoubleFile(FileAt file, double factor=1.0)
 {
-	char buffer[64];
-	auto s = ReadTextFile(file, buffer, sizeof(buffer));
-	return ParseUint64(s) * factor;
-}
-
-static void
-ForEachTextLine(FileAt file, Invocable<std::string_view> auto f)
-{
-	char buffer[4096];
-	const auto contents = ReadTextFile(file, buffer, sizeof(buffer));
-
-	for (const auto i : IterableSplitString(contents, '\n'))
-		f(Strip(i));
+	return WithSmallTextFile<64>(file, ParseUint64) * factor;
 }
 
 static void
 ForEachNameValue(FileAt file,
 		 Invocable<std::string_view, std::string_view> auto f)
 {
-	ForEachTextLine(file, [&f](std::string_view line){
+	ForEachTextLine<4096>(file, [&f](std::string_view line){
+		line = Strip(line);
 		auto [a, b] = Split(line, ' ');
 		if (!a.empty() && b.data() != nullptr)
 			f(a, b);
@@ -245,11 +232,12 @@ ParsePressureLine(std::string_view line)
 }
 
 static auto
-ReadPressureFile(FileAt file)
+ReadPressureFile(auto &&file)
 {
 	CgroupPressureValues result;
 
-	ForEachTextLine(file, [&result](const auto line){
+	ForEachTextLine<1024>(file, [&result](std::string_view line){
+		line = Strip(line);
 		const auto [s, rest] = Split(line, ' ');
 
 		if (s == "some"sv)

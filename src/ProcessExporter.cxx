@@ -35,10 +35,10 @@
 #include "ProcessInfo.hxx"
 #include "ProcessIterator.hxx"
 #include "NumberParser.hxx"
-#include "TextFile.hxx"
 #include "io/BufferedOutputStream.hxx"
 #include "io/DirectoryReader.hxx"
 #include "io/FileAt.hxx"
+#include "io/SmallTextFile.hxx"
 #include "io/Open.hxx"
 #include "io/UniqueFileDescriptor.hxx"
 #include "system/Error.hxx"
@@ -55,12 +55,11 @@ using std::string_view_literals::operator""sv;
 
 template<std::size_t buffer_size>
 std::string
-ReadTextFile(FileAt file)
+ReadTextFile(auto &&file)
 {
-	char buffer[buffer_size];
-	auto value = ReadTextFile(OpenReadOnly(file.directory, file.name),
-				  buffer, buffer_size);
-	return std::string{value};
+	return WithSmallTextFile<buffer_size>(file, [](std::string_view contents){
+		return std::string{contents};
+	});
 }
 
 struct ProcessStatus {
@@ -191,20 +190,10 @@ using ProcessGroupMap = std::unordered_map<std::string, ProcessGroupData>;
 static void
 CollectProcess(ProcessGroupData &group, unsigned, FileDescriptor pid_fd)
 {
-	char status_buffer[4096];
-	const auto status =
-		ParseProcessStatus(ReadTextFile({pid_fd, "status"},
-						status_buffer,
-						sizeof(status_buffer)));
-
-	char stat_buffer[1024];
-	const auto stat =
-		ParseProcessStat(ReadTextFile({pid_fd, "stat"},
-					      stat_buffer,
-					      sizeof(stat_buffer)));
-
-	group += status;
-	group += stat;
+	group += WithSmallTextFile<4096>(FileAt{pid_fd, "status"},
+					 ParseProcessStatus);
+	group += WithSmallTextFile<1024>(FileAt{pid_fd, "stat"},
+					 ParseProcessStat);
 }
 
 static auto
@@ -228,16 +217,13 @@ CollectProcessGroups(const ProcessExporterConfig &config, FileDescriptor proc_fd
 		if (name.empty())
 			return;
 
-		char stat_buffer[1024];
-		const auto stat =
-			ParseProcessStat(ReadTextFile({pid_fd, "stat"},
-						      stat_buffer,
-						      sizeof(stat_buffer)));
+		const auto stat = WithSmallTextFile<1024>(FileAt{pid_fd, "stat"},
+							  ParseProcessStat);
 
 		ProcessInfo info;
 		info.comm = std::string{stat.comm};
 		info.exe = std::string{name};
-		info.cmdline = ReadTextFile<4096>({pid_fd, "cmdline"});
+		info.cmdline = ReadTextFile<4096>(FileAt{pid_fd, "cmdline"});
 		std::replace(info.cmdline.begin(), info.cmdline.end(),
 			     '\0', ' ');
 
