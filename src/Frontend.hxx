@@ -36,16 +36,18 @@
 #include "io/StringOutputStream.hxx"
 #include "io/BufferedOutputStream.hxx"
 #include "lib/zlib/GzipOutputStream.hxx"
-#include "util/ConstBuffer.hxx"
 #include "util/PrintException.hxx"
 #include "util/ScopeExit.hxx"
+#include "util/SpanCast.hxx"
 
 #include <systemd/sd-daemon.h>
 
+#include <cstddef>
 #include <cstdlib>
 #include <cstdint>
 #include <exception>
 #include <memory>
+#include <span>
 
 #include <poll.h>
 #include <sys/socket.h>
@@ -82,7 +84,7 @@ FrontendRequest
 ReceiveFrontendRequest(int fd) noexcept;
 
 bool
-SendResponse(int fd, bool gzip, ConstBuffer<char> body) noexcept;
+SendResponse(int fd, bool gzip, std::span<const std::byte> body) noexcept;
 
 template<typename Handler>
 int
@@ -148,7 +150,7 @@ RunExporterHttp(const std::size_t n_listeners, Handler &&handler)
 				const auto &value = sos.GetValue();
 
 				if (SendResponse(fd, request.gzip,
-						 {value.data(), value.size()}))
+						 AsBytes(value)))
 					/* this avoids resetting the
 					   connection on close() */
 					shutdown(fd, SHUT_WR);

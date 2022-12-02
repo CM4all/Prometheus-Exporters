@@ -63,22 +63,22 @@ ReceiveFrontendRequest(int fd) noexcept
 }
 
 static bool
-SendFull(int fd, ConstBuffer<char> buffer) noexcept
+SendFull(int fd, std::span<const std::byte> buffer) noexcept
 {
 	while (!buffer.empty()) {
-		ssize_t nbytes = send(fd, buffer.data, buffer.size,
+		ssize_t nbytes = send(fd, buffer.data(), buffer.size(),
 				      MSG_NOSIGNAL);
 		if (nbytes <= 0)
 			return false;
 
-		buffer.skip_front(nbytes);
+		buffer = buffer.subspan(nbytes);
 	}
 
 	return true;
 }
 
 bool
-SendResponse(int fd, bool gzip, ConstBuffer<char> body) noexcept
+SendResponse(int fd, bool gzip, std::span<const std::byte> body) noexcept
 {
 	char headers[1024];
 	size_t header_size =
@@ -89,8 +89,8 @@ SendResponse(int fd, bool gzip, ConstBuffer<char> body) noexcept
 			"content-length: %zu\r\n"
 			"\r\n",
 			gzip ? "content-encoding: gzip\r\n" : "",
-			body.size);
+			body.size());
 
-	return SendFull(fd, {headers, header_size}) &&
+	return SendFull(fd, AsBytes(std::string_view{headers, header_size})) &&
 		SendFull(fd, body);
 }
