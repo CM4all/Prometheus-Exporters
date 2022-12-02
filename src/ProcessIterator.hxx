@@ -35,14 +35,15 @@
 #include "io/DirectoryReader.hxx"
 #include "io/Open.hxx"
 #include "io/UniqueFileDescriptor.hxx"
+#include "util/Concepts.hxx"
 #include "util/PrintException.hxx"
 
 #include <cstdlib>
 #include <exception>
 
-template<typename F>
 void
-ForEachProcess(FileDescriptor proc_fd, F &&f)
+ForEachProcess(FileDescriptor proc_fd,
+	       Invocable<unsigned, FileDescriptor> auto f)
 {
 	DirectoryReader r(OpenDirectory(proc_fd, "."));
 	while (auto name = r.Read()) {
@@ -64,9 +65,9 @@ ForEachProcess(FileDescriptor proc_fd, F &&f)
 	}
 }
 
-template<typename F>
 void
-ForEachProcessThread(FileDescriptor pid_fd, F &&f)
+ForEachProcessThread(FileDescriptor pid_fd,
+		     Invocable<unsigned, FileDescriptor> auto f)
 {
 	DirectoryReader r(OpenDirectory(pid_fd, "task"));
 	while (auto name = r.Read()) {
@@ -88,9 +89,9 @@ ForEachProcessThread(FileDescriptor pid_fd, F &&f)
 	}
 }
 
-template<typename F>
 void
-ForEachThread(FileDescriptor proc_fd, F &&f)
+ForEachThread(FileDescriptor proc_fd,
+	      Invocable<unsigned, FileDescriptor> auto f)
 {
 	ForEachProcess(proc_fd, [&](unsigned, FileDescriptor pid_fd){
 		ForEachProcessThread(pid_fd, f);

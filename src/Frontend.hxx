@@ -36,6 +36,7 @@
 #include "io/StringOutputStream.hxx"
 #include "io/BufferedOutputStream.hxx"
 #include "lib/zlib/GzipOutputStream.hxx"
+#include "util/Concepts.hxx"
 #include "util/PrintException.hxx"
 #include "util/ScopeExit.hxx"
 #include "util/SpanCast.hxx"
@@ -53,9 +54,11 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-template<typename Handler>
+template<typename T>
+concept Handler = Invocable<T, BufferedOutputStream &>;
+
 int
-RunExporterStdio(Handler &&handler)
+RunExporterStdio(Handler auto handler)
 {
 	int result = EXIT_SUCCESS;
 
@@ -86,9 +89,8 @@ ReceiveFrontendRequest(int fd) noexcept;
 bool
 SendResponse(int fd, bool gzip, std::span<const std::byte> body) noexcept;
 
-template<typename Handler>
 int
-RunExporterHttp(const std::size_t n_listeners, Handler &&handler)
+RunExporterHttp(const std::size_t n_listeners, Handler auto handler)
 {
 	int result = EXIT_SUCCESS;
 
@@ -163,16 +165,14 @@ RunExporterHttp(const std::size_t n_listeners, Handler &&handler)
 	return result;
 }
 
-template<typename Handler>
 int
-RunExporter(Handler &&handler)
+RunExporter(Handler auto handler)
 {
 	int n_listeners = sd_listen_fds(true);
 	if (n_listeners > 0)
 		/* if we have systemd sockets, assume those are HTTP
 		   listeners */
-		return RunExporterHttp(n_listeners,
-				       std::forward<Handler>(handler));
+		return RunExporterHttp(n_listeners, handler);
 
-	return RunExporterStdio(std::forward<Handler>(handler));
+	return RunExporterStdio(handler);
 }

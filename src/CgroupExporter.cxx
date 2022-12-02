@@ -38,6 +38,7 @@
 #include "io/DirectoryReader.hxx"
 #include "io/Open.hxx"
 #include "io/UniqueFileDescriptor.hxx"
+#include "util/Concepts.hxx"
 #include "util/IterableSplitString.hxx"
 #include "util/PrintException.hxx"
 #include "util/StringCompare.hxx"
@@ -85,9 +86,9 @@ ReadDoubleFile(FileDescriptor directory_fd, const char *filename,
 	return ParseUint64(s) * factor;
 }
 
-template<typename F>
 static void
-ForEachTextLine(FileDescriptor directory_fd, const char *filename, F &&f)
+ForEachTextLine(FileDescriptor directory_fd, const char *filename,
+		Invocable<std::string_view> auto f)
 {
 	char buffer[4096];
 	const auto contents = ReadTextFile(directory_fd, filename, buffer, sizeof(buffer));
@@ -96,9 +97,9 @@ ForEachTextLine(FileDescriptor directory_fd, const char *filename, F &&f)
 		f(Strip(i));
 }
 
-template<typename F>
 static void
-ForEachNameValue(FileDescriptor directory_fd, const char *filename, F &&f)
+ForEachNameValue(FileDescriptor directory_fd, const char *filename,
+		 Invocable<std::string_view, std::string_view> auto f)
 {
 	ForEachTextLine(directory_fd, filename, [&f](std::string_view line){
 		auto [a, b] = Split(line, ' ');
