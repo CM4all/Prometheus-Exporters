@@ -158,6 +158,7 @@ executable(
   'cm4all-cgroup-exporter',
   'src/CgroupExporter.cxx',
   'src/CgroupConfig.cxx',
+  'src/Pressure.cxx',
   include_directories: inc,
   dependencies: [
     libsystemd,

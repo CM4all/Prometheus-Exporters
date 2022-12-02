@@ -32,6 +32,7 @@
 
 #include "Frontend.hxx"
 #include "CgroupConfig.hxx"
+#include "Pressure.hxx"
 #include "NumberParser.hxx"
 #include "io/BufferedOutputStream.hxx"
 #include "io/DirectoryReader.hxx"
@@ -109,20 +110,11 @@ struct CgroupPidsValues {
 	int64_t current = -1;
 };
 
-struct CgroupPressureItemValues {
-	double avg10 = -1, avg60 = -1, avg300 = -1;
-	double stall_time = -1;
-};
-
-struct CgroupPressureValues {
-	CgroupPressureItemValues some, full;
-};
-
 struct CgroupValues {
 	CgroupCpuacctValues cpuacct;
 	CgroupMemoryValues memory;
 	CgroupPidsValues pids;
-	CgroupPressureValues cpu_pressure, io_pressure, memory_pressure;
+	PressureValues cpu_pressure, io_pressure, memory_pressure;
 };
 
 struct CgroupsData {
@@ -204,49 +196,6 @@ Substitute(char *dest, const char *src, const char *a, const char *b) noexcept
 	}
 
 	return stpcpy(dest, src);
-}
-
-static auto
-ParsePressureLine(std::string_view line)
-{
-	static constexpr double micro_factor = 1e-6;
-
-	CgroupPressureItemValues result;
-
-	for (std::string_view i : IterableSplitString(line, ' ')) {
-		const auto [name, value] = Split(i, '=');
-		if (value.data() == nullptr)
-			continue;
-
-		if (name == "avg10"sv)
-			result.avg10 = ParseDouble(value);
-		else if (name == "avg60"sv)
-			result.avg60 = ParseDouble(value);
-		else if (name == "avg300"sv)
-			result.avg300 = ParseDouble(value);
-		else if (name == "total"sv)
-			result.stall_time = ParseUint64(value) * micro_factor;
-	}
-
-	return result;
-}
-
-static auto
-ReadPressureFile(auto &&file)
-{
-	CgroupPressureValues result;
-
-	ForEachTextLine<1024>(file, [&result](std::string_view line){
-		line = Strip(line);
-		const auto [s, rest] = Split(line, ' ');
-
-		if (s == "some"sv)
-			result.some = ParsePressureLine(rest);
-		else if (s == "full"sv)
-			result.full = ParsePressureLine(rest);
-	});
-
-	return result;
 }
 
 inline void
@@ -447,7 +396,7 @@ WritePressureRatio(BufferedOutputStream &os, const char *group,
 static void
 WritePressureRatio(BufferedOutputStream &os, const char *group,
 		   const char *resource, const char *type,
-		   const CgroupPressureItemValues &values)
+		   const PressureItemValues &values)
 {
 	WritePressureRatio(os, group, resource, type, "10", values.avg10);
 	WritePressureRatio(os, group, resource, type, "60", values.avg60);
@@ -457,7 +406,7 @@ WritePressureRatio(BufferedOutputStream &os, const char *group,
 static void
 WritePressureRatio(BufferedOutputStream &os, const char *group,
 		   const char *resource,
-		   const CgroupPressureValues &values)
+		   const PressureValues &values)
 {
 	WritePressureRatio(os, group, resource, "some", values.some);
 	WritePressureRatio(os, group, resource, "full", values.full);
@@ -476,7 +425,7 @@ WritePressureStallTime(BufferedOutputStream &os, const char *group,
 static void
 WritePressureStallTime(BufferedOutputStream &os, const char *group,
 		       const char *resource, const char *type,
-		       const CgroupPressureItemValues &values)
+		       const PressureItemValues &values)
 {
 	WritePressureStallTime(os, group, resource, type, values.stall_time);
 }
@@ -484,7 +433,7 @@ WritePressureStallTime(BufferedOutputStream &os, const char *group,
 static void
 WritePressureStallTime(BufferedOutputStream &os, const char *group,
 		   const char *resource,
-		   const CgroupPressureValues &values)
+		   const PressureValues &values)
 {
 	WritePressureStallTime(os, group, resource, "some", values.some);
 	WritePressureStallTime(os, group, resource, "full", values.full);
