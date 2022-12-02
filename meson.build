@@ -1,7 +1,7 @@
 project('CM4all Prometheus Exporters', ['cpp'], version: '0.6',
   meson_version: '>= 0.49',
   default_options: [
-    'cpp_std=c++20',
+    'cpp_std=c++2a',
     'warning_level=3',
 
     # Not interested in compiler warnings from subprojects.
