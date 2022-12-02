@@ -8,7 +8,7 @@ Build-Depends: debhelper (>= 12~),
  zlib1g-dev,
  libcurl4-openssl-dev (>= 7.40),
  libyaml-cpp-dev,
- libpcre3-dev,
+ libpcre2-dev,
  libsystemd-dev
 Standards-Version: 4.0.0
 Vcs-Browser: https://github.com/CM4all/Prometheus-Exporters
