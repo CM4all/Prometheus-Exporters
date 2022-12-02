@@ -32,6 +32,8 @@
 
 #include "Frontend.hxx"
 #include "NumberParser.hxx"
+#include "Pressure.hxx"
+#include "system/Error.hxx"
 #include "io/BufferedOutputStream.hxx"
 #include "io/SmallTextFile.hxx"
 #include "util/IterableSplitString.hxx"
@@ -41,6 +43,7 @@
 
 #include <cstdlib>
 
+#include <fcntl.h>
 #include <inttypes.h>
 
 using std::string_view_literals::operator""sv;
@@ -120,11 +123,54 @@ Export(BufferedOutputStream &os, auto &&file,
 }
 
 static void
+ExportPressure(BufferedOutputStream &os, auto &&file,
+	       const char *some_name, const char *some_help,
+	       const char *full_name, const char *full_help)
+try {
+	auto data = ReadPressureFile(file);
+
+	if (some_name != nullptr && data.some.stall_time >= 0)
+		os.Format("# HELP %s\n# TYPE %s gauge\n%s %e\n",
+			  some_name, some_help, some_name,
+			  data.some.stall_time);
+
+	if (full_name != nullptr && data.full.stall_time >= 0)
+		os.Format("# HELP %s\n# TYPE %s gauge\n%s %e\n",
+			  full_name, full_help, full_name,
+			  data.full.stall_time);
+} catch (const std::system_error &e) {
+	if (!IsFileNotFound(e))
+		throw;
+}
+
+static void
+ExportPressure(BufferedOutputStream &os)
+{
+	ExportPressure(os, "/proc/pressure/cpu",
+		       "node_pressure_cpu_waiting_seconds_total",
+		       "Total time in seconds that processes have waited for CPU time",
+		       nullptr, nullptr);
+
+	ExportPressure(os, "/proc/pressure/io",
+		       "node_pressure_io_waiting_seconds_total",
+		       "Total time in seconds that processes have waited due to IO congestion",
+		       "node_pressure_io_stalled_seconds_total",
+		       "Total time in seconds no process could make progress due to IO congestion");
+
+	ExportPressure(os, "/proc/pressure/memory",
+		       "node_pressure_memory_waiting_seconds_total",
+		       "Total time in seconds that processes have waited for memory",
+		       "node_pressure_memory_stalled_seconds_total",
+		       "Total time in seconds no process could make progress due to memory congestion");
+}
+
+static void
 ExportKernel(BufferedOutputStream &os)
 {
 	Export<256>(os, "/proc/loadavg", ExportLoadAverage);
 	Export<8192>(os, "/proc/meminfo", ExportMemInfo);
 	Export<16384>(os, "/proc/vmstat", ExportVmStat);
+	ExportPressure(os);
 }
 
 int
