@@ -36,6 +36,7 @@
 #include "NumberParser.hxx"
 #include "io/BufferedOutputStream.hxx"
 #include "io/DirectoryReader.hxx"
+#include "io/FileAt.hxx"
 #include "io/Open.hxx"
 #include "io/UniqueFileDescriptor.hxx"
 #include "util/IterableSplitString.hxx"
@@ -59,7 +60,7 @@ static void
 ExportLoadAverage(BufferedOutputStream &os)
 {
 	char buffer[267];
-	auto s = ReadTextFile(FileDescriptor{AT_FDCWD}, "/proc/loadavg",
+	auto s = ReadTextFile({FileDescriptor{AT_FDCWD}, "/proc/loadavg"},
 			      buffer, sizeof(buffer));
 
 	os.Write(R"(# HELP loadavg Load average.
@@ -85,7 +86,7 @@ static void
 ExportMemInfo(BufferedOutputStream &os)
 {
 	char buffer[8192];
-	auto s = ReadTextFile(FileDescriptor{AT_FDCWD}, "/proc/meminfo",
+	auto s = ReadTextFile({FileDescriptor{AT_FDCWD}, "/proc/meminfo"},
 			      buffer, sizeof(buffer));
 
 	os.Write(R"(# HELP meminfo Kernel memory info
@@ -115,7 +116,7 @@ static void
 ExportVmStat(BufferedOutputStream &os)
 {
 	char buffer[16384];
-	auto s = ReadTextFile(FileDescriptor{AT_FDCWD}, "/proc/vmstat",
+	auto s = ReadTextFile({FileDescriptor{AT_FDCWD}, "/proc/vmstat"},
 			      buffer, sizeof(buffer));
 
 	os.Write(R"(# HELP vmstat

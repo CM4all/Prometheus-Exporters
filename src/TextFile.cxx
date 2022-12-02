@@ -31,6 +31,7 @@
  */
 
 #include "TextFile.hxx"
+#include "io/FileAt.hxx"
 #include "io/Open.hxx"
 #include "io/UniqueFileDescriptor.hxx"
 #include "system/Error.hxx"
@@ -54,9 +55,8 @@ ReadTextFile(FileDescriptor fd, char *buffer, std::size_t buffer_size)
 }
 
 std::string_view
-ReadTextFile(FileDescriptor directory_fd, const char *filename,
-	     char *buffer, std::size_t buffer_size)
+ReadTextFile(FileAt file, char *buffer, std::size_t buffer_size)
 {
-	return ReadTextFile(OpenReadOnly(directory_fd, filename),
+	return ReadTextFile(OpenReadOnly(file.directory, file.name),
 			    buffer, buffer_size);
 }

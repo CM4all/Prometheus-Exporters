@@ -36,6 +36,7 @@
 #include "NumberParser.hxx"
 #include "io/BufferedOutputStream.hxx"
 #include "io/DirectoryReader.hxx"
+#include "io/FileAt.hxx"
 #include "io/Open.hxx"
 #include "io/UniqueFileDescriptor.hxx"
 #include "util/Concepts.hxx"
@@ -69,39 +70,37 @@ ParseUsec(std::string_view text)
 }
 
 static int64_t
-ReadUint64File(FileDescriptor directory_fd, const char *filename)
+ReadUint64File(FileAt file)
 {
 	char buffer[64];
-	auto s = ReadTextFile(directory_fd, filename, buffer, sizeof(buffer));
+	auto s = ReadTextFile(file, buffer, sizeof(buffer));
 	return ParseUint64(s);
 }
 
 [[gnu::pure]]
 static double
-ReadDoubleFile(FileDescriptor directory_fd, const char *filename,
-	       double factor=1.0)
+ReadDoubleFile(FileAt file, double factor=1.0)
 {
 	char buffer[64];
-	auto s = ReadTextFile(directory_fd, filename, buffer, sizeof(buffer));
+	auto s = ReadTextFile(file, buffer, sizeof(buffer));
 	return ParseUint64(s) * factor;
 }
 
 static void
-ForEachTextLine(FileDescriptor directory_fd, const char *filename,
-		Invocable<std::string_view> auto f)
+ForEachTextLine(FileAt file, Invocable<std::string_view> auto f)
 {
 	char buffer[4096];
-	const auto contents = ReadTextFile(directory_fd, filename, buffer, sizeof(buffer));
+	const auto contents = ReadTextFile(file, buffer, sizeof(buffer));
 
 	for (const auto i : IterableSplitString(contents, '\n'))
 		f(Strip(i));
 }
 
 static void
-ForEachNameValue(FileDescriptor directory_fd, const char *filename,
+ForEachNameValue(FileAt file,
 		 Invocable<std::string_view, std::string_view> auto f)
 {
-	ForEachTextLine(directory_fd, filename, [&f](std::string_view line){
+	ForEachTextLine(file, [&f](std::string_view line){
 		auto [a, b] = Split(line, ' ');
 		if (!a.empty() && b.data() != nullptr)
 			f(a, b);
@@ -157,21 +156,21 @@ struct WalkContext {
 		path[0] = 0;
 	}
 
-	void Dive(FileDescriptor parent_fd, const char *name);
-	void HandleRegularFile(FileDescriptor parent_fd, const char *name);
+	void Dive(FileAt file);
+	void HandleRegularFile(FileAt file);
 	void DoWalk(UniqueFileDescriptor directory_fd);
 };
 
 enum class WalkDecision { IGNORE, DIRECTORY, REGULAR };
 
 static WalkDecision
-CheckWalkFile(FileDescriptor directory_fd, const char *name)
+CheckWalkFile(FileAt file)
 {
-	if (*name == '.')
+	if (*file.name == '.')
 		return WalkDecision::IGNORE;
 
 	struct stat st;
-	if (fstatat(directory_fd.Get(), name, &st,
+	if (fstatat(file.directory.Get(), file.name, &st,
 		    AT_NO_AUTOMOUNT|AT_SYMLINK_NOFOLLOW) < 0)
 		return WalkDecision::IGNORE;
 
@@ -184,21 +183,21 @@ CheckWalkFile(FileDescriptor directory_fd, const char *name)
 }
 
 inline void
-WalkContext::Dive(FileDescriptor parent_fd, const char *name)
+WalkContext::Dive(FileAt file)
 {
 	const size_t old_length = length;
-	const size_t name_length = strlen(name);
+	const size_t name_length = strlen(file.name);
 
 	if (old_length + name_length + 2 >= sizeof(path))
 		return;
 
 	if (length > 0)
 		path[length++] = '/';
-	memcpy(path + length, name, name_length);
+	memcpy(path + length, file.name, name_length);
 	length += name_length;
 	path[length] = 0;
 
-	DoWalk(OpenDirectory(parent_fd, name, O_NOFOLLOW));
+	DoWalk(OpenDirectory(file.directory, file.name, O_NOFOLLOW));
 
 	length = old_length;
 	path[length] = 0;
@@ -246,11 +245,11 @@ ParsePressureLine(std::string_view line)
 }
 
 static auto
-ReadPressureFile(FileDescriptor directory_fd, const char *filename)
+ReadPressureFile(FileAt file)
 {
 	CgroupPressureValues result;
 
-	ForEachTextLine(directory_fd, filename, [&result](const auto line){
+	ForEachTextLine(file, [&result](const auto line){
 		const auto [s, rest] = Split(line, ' ');
 
 		if (s == "some"sv)
@@ -263,8 +262,9 @@ ReadPressureFile(FileDescriptor directory_fd, const char *filename)
 }
 
 inline void
-WalkContext::HandleRegularFile(FileDescriptor parent_fd, const char *base)
+WalkContext::HandleRegularFile(FileAt file)
 {
+	const char *base = file.name;
 	const char *group_name = path;
 
 	char unescape_buffer[sizeof(path)];
@@ -281,11 +281,10 @@ WalkContext::HandleRegularFile(FileDescriptor parent_fd, const char *base)
 
 	if (StringIsEqual(base, "cpuacct.usage")) {
 		// cgroup1
-		group.cpuacct.usage = ReadDoubleFile(parent_fd, base,
-						     nano_factor);
+		group.cpuacct.usage = ReadDoubleFile(file, nano_factor);
 	} else if (StringIsEqual(base, "cpuacct.stat")) {
 		// cgroup1
-		ForEachNameValue(parent_fd, base, [&group](auto name, auto value){
+		ForEachNameValue(file, [&group](auto name, auto value){
 			if (name == "user"sv)
 				group.cpuacct.user = ParseUserHz(value);
 			else if (name == "system"sv)
@@ -293,7 +292,7 @@ WalkContext::HandleRegularFile(FileDescriptor parent_fd, const char *base)
 		});
 	} else if (StringIsEqual(base, "cpu.stat")) {
 		// cgroup2
-		ForEachNameValue(parent_fd, base, [&group](auto name, auto value){
+		ForEachNameValue(file, [&group](auto name, auto value){
 			if (name == "usage_usec"sv)
 				group.cpuacct.usage = ParseUsec(value);
 			else if (name == "user_usec"sv)
@@ -305,18 +304,18 @@ WalkContext::HandleRegularFile(FileDescriptor parent_fd, const char *base)
 		   StringIsEqual(base, "memory.usage_in_bytes") ||
 		   /* cgroup2 */
 		   StringIsEqual(base, "memory.current")) {
-		group.memory.usage = ReadUint64File(parent_fd, base);
+		group.memory.usage = ReadUint64File(file);
 	} else if (StringIsEqual(base, "memory.swap.current")) {
 		// cgroup2
-		group.memory.swap_usage = ReadUint64File(parent_fd, base);
+		group.memory.swap_usage = ReadUint64File(file);
 	} else if (StringIsEqual(base, "memory.kmem.usage_in_bytes")) {
 		// cgroup1
-		group.memory.kmem_usage = ReadUint64File(parent_fd, base);
+		group.memory.kmem_usage = ReadUint64File(file);
 	} else if (StringIsEqual(base, "memory.memsw.usage_in_bytes")) {
 		// cgroup1
-		group.memory.memsw_usage = ReadUint64File(parent_fd, base);
+		group.memory.memsw_usage = ReadUint64File(file);
 	} else if (StringIsEqual(base, "memory.stat")) {
-		ForEachNameValue(parent_fd, base, [&group](auto name, auto value){
+		ForEachNameValue(file, [&group](auto name, auto value){
 			if (name.ends_with("_limit"sv))
 				/* skip hierarchical_memory_limit */
 				return;
@@ -324,13 +323,13 @@ WalkContext::HandleRegularFile(FileDescriptor parent_fd, const char *base)
 			group.memory.stat[std::string{name}] = ParseUint64(value);
 		});
 	} else if (StringIsEqual(base, "pids.current")) {
-		group.pids.current = ReadUint64File(parent_fd, base);
+		group.pids.current = ReadUint64File(file);
 	} else if (StringIsEqual(base, "cpu.pressure")) {
-		group.cpu_pressure = ReadPressureFile(parent_fd, base);
+		group.cpu_pressure = ReadPressureFile(file);
 	} else if (StringIsEqual(base, "io.pressure")) {
-		group.io_pressure = ReadPressureFile(parent_fd, base);
+		group.io_pressure = ReadPressureFile(file);
 	} else if (StringIsEqual(base, "memory.pressure")) {
-		group.memory_pressure = ReadPressureFile(parent_fd, base);
+		group.memory_pressure = ReadPressureFile(file);
 	}
 }
 
@@ -342,18 +341,20 @@ WalkContext::DoWalk(UniqueFileDescriptor directory_fd)
 	const bool opaque = config.opaque_paths.find(path) != config.opaque_paths.end();
 
 	while (auto name = r.Read()) {
-		switch (CheckWalkFile(r.GetFileDescriptor(), name)) {
+		const FileAt file{r.GetFileDescriptor(), name};
+
+		switch (CheckWalkFile(file)) {
 		case WalkDecision::IGNORE:
 			break;
 
 		case WalkDecision::DIRECTORY:
 			if (!opaque && !config.CheckIgnoreName(name))
-				Dive(r.GetFileDescriptor(), name);
+				Dive(file);
 			break;
 
 		case WalkDecision::REGULAR:
 			try {
-				HandleRegularFile(r.GetFileDescriptor(), name);
+				HandleRegularFile(file);
 			} catch (...) {
 				PrintException(std::current_exception());
 			}
