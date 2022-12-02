@@ -217,6 +217,138 @@ ExportProcNetDev(BufferedOutputStream &os, std::string_view s)
 	}
 }
 
+[[gnu::pure]]
+static bool
+IgnoreDisk(std::string_view device) noexcept
+{
+	return device.starts_with("ram"sv) || device.starts_with("loop"sv);
+}
+
+static void
+ExportProcDiskstats(BufferedOutputStream &os, std::string_view s)
+{
+	static constexpr struct {
+		const char *name;
+		const char *help;
+		const char *type;
+		double factor = 1;
+	} proc_diskstats_columns[] = {
+		{
+			"reads_completed_total",
+			"The total number of reads completed successfully.",
+			"counter",
+		},
+		{
+			"reads_merged_total",
+			"The total number of reads merged.",
+			"counter",
+		},
+		{
+			"read_bytes_total",
+			"The total number of bytes read successfully.",
+			"counter",
+			512,
+		},
+		{
+			"read_time_seconds_total",
+			"The total number of seconds spent by all reads",
+			"counter",
+			0.001,
+		},
+
+		{
+			"writes_completed_total",
+			"The total number of writes completed successfully.",
+			"counter",
+		},
+		{
+			"writes_merged_total",
+			"The total number of writes merged.",
+			"counter",
+		},
+		{
+			"write_bytes_total",
+			"The total number of bytes write successfully.",
+			"counter",
+			512,
+		},
+		{
+			"write_time_seconds_total",
+			"The total number of seconds spent by all writes",
+			"counter",
+			0.001,
+		},
+
+		{
+			"io_now",
+			"The number of I/Os currently in progress.",
+			"gauge",
+		},
+
+		{
+			"io_time_seconds_total",
+			"Total seconds spent doing I/Os.",
+			"counter",
+			0.001,
+		},
+
+		{
+			"io_time_weighted_seconds_total",
+			"The weighted # of seconds spent doing I/Os.",
+			"counter",
+			0.001,
+		},
+
+		{
+			"discards_completed_total",
+			"The total number of discards completed successfully.",
+			"counter",
+		},
+		{
+			"discards_merged_total",
+			"The total number of discards merged.",
+			"counter",
+		},
+
+		// TODO implement the rest
+	};
+
+	bool first = true;
+	for (auto line : IterableSplitString(s, '\n')) {
+		// skip "major"
+		line = Split(StripLeft(line), ' ').second;
+
+		// skip "minor"
+		line = Split(StripLeft(line), ' ').second;
+
+		auto [device, values] = Split(StripLeft(line), ' ');
+		if (IgnoreDisk(device))
+			continue;
+
+		for (const auto &c : proc_diskstats_columns) {
+			auto [value_s, rest] = Split(StripLeft(values), ' ');
+			if (value_s.empty())
+				break;
+
+			values = StripLeft(rest);
+
+			const uint64_t value = ParseUint64(value_s);
+
+			if (first)
+				os.Format(R"(# HELP node_disk_%s %s
+# TYPE node_disk_%s %s
+)",
+					  c.name, c.help, c.name, c.type);
+
+			os.Format("node_disk_%s{device=\"%.*s\"} %e\n",
+				  c.name, int(device.size()), device.data(),
+				  value * c.factor);
+		}
+
+		first = false;
+	}
+}
+
 template<std::size_t buffer_size>
 static void
 Export(BufferedOutputStream &os, auto &&file,
@@ -276,6 +408,7 @@ ExportKernel(BufferedOutputStream &os)
 	Export<8192>(os, "/proc/meminfo", ExportMemInfo);
 	Export<16384>(os, "/proc/vmstat", ExportVmStat);
 	Export<16384>(os, "/proc/net/dev", ExportProcNetDev);
+	Export<16384>(os, "/proc/diskstats", ExportProcDiskstats);
 	ExportPressure(os);
 }
 
