@@ -31,26 +31,17 @@
  */
 
 #include "Frontend.hxx"
-#include "CgroupConfig.hxx"
 #include "NumberParser.hxx"
 #include "io/BufferedOutputStream.hxx"
-#include "io/DirectoryReader.hxx"
-#include "io/FileAt.hxx"
 #include "io/SmallTextFile.hxx"
 #include "util/IterableSplitString.hxx"
 #include "util/PrintException.hxx"
 #include "util/StringCompare.hxx"
 #include "util/StringSplit.hxx"
 
-#include <algorithm>
 #include <cstdlib>
-#include <map>
-#include <string>
 
-#include <fcntl.h>
 #include <inttypes.h>
-#include <string.h>
-#include <sys/stat.h>
 
 using std::string_view_literals::operator""sv;
 
