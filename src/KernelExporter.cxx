@@ -64,15 +64,31 @@ ExportLoadAverage(BufferedOutputStream &os, std::string_view s)
 	auto [load15s, rest15] = Split(rest5, ' ');
 	const double load15 = ParseDouble(load15s);
 
+	/* obsolete (proprietary) output format */
+
 	os.Format(R"(loadavg{period="1m"} %e
 loadavg{period="5m"} %e
 loadavg{period="15m"} %e
+)", load1, load5, load15);
+
+	/* same output format as node_exporter */
+
+	os.Format(R"(# HELP node_load1 1m load average.
+# TYPE node_load1 gauge
+node_load1 %e
+# HELP node_load15 15m load average.
+# TYPE node_load15 gauge
+node_load15 %e
+# HELP node_load5 5m load average.
+# TYPE node_load5 gauge
+node_load5 %e
 )", load1, load5, load15);
 }
 
 static void
 ExportMemInfo(BufferedOutputStream &os, std::string_view s)
 {
+	/* obsolete (proprietary) output format */
 	os.Write(R"(# HELP meminfo Kernel memory info
 # TYPE meminfo gauge
 )");
@@ -90,25 +106,56 @@ ExportMemInfo(BufferedOutputStream &os, std::string_view s)
 		if (RemoveSuffix(value, " kB"sv))
 			unit = 1024;
 
+		const uint64_t nbytes = ParseUint64(value) * unit;
+
+		/* obsolete (proprietary) output format */
 		os.Format("meminfo{name=\"%.*s\"} %" PRIu64 "\n",
 			  int(name.size()), name.data(),
-			  ParseUint64(value) * unit);
+			  nbytes);
+
+		/* same output format as node_exporter */
+		os.Format(R"(# HELP node_memory_%.*s_bytes Memory information field %.*s_bytes.
+# TYPE node_memory_%.*s_bytes gauge
+)"
+			  "node_memory_%.*s_bytes %" PRIu64 "\n",
+			  int(name.size()), name.data(),
+			  int(name.size()), name.data(),
+			  int(name.size()), name.data(),
+			  int(name.size()), name.data(),
+			  nbytes);
 	}
 }
 
 static void
 ExportVmStat(BufferedOutputStream &os, std::string_view s)
 {
+	/* obsolete (proprietary) output format */
 	os.Write(R"(# HELP vmstat
 # TYPE vmstat untyped
 )");
 
 	for (const auto line : IterableSplitString(s, '\n')) {
 		auto [name, value] = Split(line, ' ');
-		if (!name.empty() && !value.empty())
-			os.Format("vmstat{name=\"%.*s\"} %" PRIu64 "\n",
-				  int(name.size()), name.data(),
-				  ParseUint64(value));
+		if (name.empty() || value.empty())
+			continue;
+
+		const uint64_t v = ParseUint64(value);
+
+		/* obsolete (proprietary) output format */
+		os.Format("vmstat{name=\"%.*s\"} %" PRIu64 "\n",
+			  int(name.size()), name.data(),
+			  v);
+
+		/* same output format as node_exporter */
+		os.Format(R"(# HELP node_vmstat_%.*s /proc/vmstat information field %.*s.
+# TYPE node_vmstat_%.*s untyped
+)"
+			  "node_vmstat_%.*s %" PRIu64 "\n",
+			  int(name.size()), name.data(),
+			  int(name.size()), name.data(),
+			  int(name.size()), name.data(),
+			  int(name.size()), name.data(),
+			  v);
 	}
 }
 
