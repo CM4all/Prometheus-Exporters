@@ -33,17 +33,19 @@
 #pragma once
 
 #include "util/CharUtil.hxx"
-#include "util/StringView.hxx"
+#include "util/StringSplit.hxx"
+#include "util/StringStrip.hxx"
 
 #include <cmath>
+#include <string_view>
 #include <utility>
 
 template<typename T>
 gcc_pure
 T
-ParseUnsignedT(StringView text) noexcept
+ParseUnsignedT(std::string_view text) noexcept
 {
-	text.StripLeft();
+	text = StripLeft(text);
 
 	T value = 0;
 	for (char ch : text) {
@@ -58,32 +60,31 @@ ParseUnsignedT(StringView text) noexcept
 
 gcc_pure
 inline auto
-ParseUnsigned(StringView text) noexcept
+ParseUnsigned(std::string_view text) noexcept
 {
 	return ParseUnsignedT<unsigned>(text);
 }
 
 gcc_pure
 inline auto
-ParseUnsignedLong(StringView text) noexcept
+ParseUnsignedLong(std::string_view text) noexcept
 {
 	return ParseUnsignedT<unsigned long>(text);
 }
 
 gcc_pure
 inline auto
-ParseUint64(StringView text) noexcept
+ParseUint64(std::string_view text) noexcept
 {
 	return ParseUnsignedT<uint64_t>(text);
 }
 
 gcc_pure
 inline double
-ParseDouble(StringView text) noexcept
+ParseDouble(std::string_view text) noexcept
 {
-	StringView a, b;
-	std::tie(a, b) = text.Split('.');
+	const auto [a, b] = Split(text, '.');
 
 	return (double)ParseUint64(a) +
-		(double)ParseUint64(b) * pow(10, -(double)b.size);
+		(double)ParseUint64(b) * pow(10, -(double)b.size());
 }

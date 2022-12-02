@@ -33,13 +33,13 @@
 #pragma once
 
 #include <cstddef>
+#include <string_view>
 
-struct StringView;
 class FileDescriptor;
 
-StringView
+std::string_view
 ReadTextFile(FileDescriptor fd, char *buffer, std::size_t buffer_size);
 
-StringView
+std::string_view
 ReadTextFile(FileDescriptor directory_fd, const char *filename,
 	     char *buffer, std::size_t buffer_size);

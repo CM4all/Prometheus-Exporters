@@ -34,7 +34,6 @@
 #include "http/List.hxx"
 #include "util/IterableSplitString.hxx"
 #include "util/StringCompare.hxx"
-#include "util/StringView.hxx"
 
 FrontendRequest
 ReceiveFrontendRequest(int fd) noexcept
@@ -48,7 +47,7 @@ ReceiveFrontendRequest(int fd) noexcept
 
 	request.valid = true;
 
-	const StringView raw(buffer, nbytes);
+	const std::string_view raw(buffer, nbytes);
 
 	for (const auto line : IterableSplitString(raw, '\n')) {
 		auto ae = StringAfterPrefixIgnoreCase(line, "accept-encoding:");

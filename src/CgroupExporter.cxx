@@ -41,7 +41,6 @@
 #include "util/IterableSplitString.hxx"
 #include "util/PrintException.hxx"
 #include "util/StringCompare.hxx"
-#include "util/StringView.hxx"
 
 #include <algorithm>
 #include <cstdlib>
@@ -52,21 +51,17 @@
 #include <string.h>
 #include <sys/stat.h>
 
-static std::string
-ToString(StringView s) noexcept
-{
-	return {s.data, s.size};
-}
+using std::string_view_literals::operator""sv;
 
 static inline auto
-ParseUserHz(StringView text)
+ParseUserHz(std::string_view text)
 {
 	static const double user_hz_to_seconds = 1.0 / sysconf(_SC_CLK_TCK);
 	return ParseUint64(text) * user_hz_to_seconds;
 }
 
 static inline auto
-ParseUsec(StringView text)
+ParseUsec(std::string_view text)
 {
 	static constexpr double usec_to_seconds = 0.000001;
 	return ParseUint64(text) * usec_to_seconds;
@@ -97,20 +92,18 @@ ForEachTextLine(FileDescriptor directory_fd, const char *filename, F &&f)
 	char buffer[4096];
 	const auto contents = ReadTextFile(directory_fd, filename, buffer, sizeof(buffer));
 
-	for (StringView i : IterableSplitString(contents, '\n')) {
-		i.Strip();
-		f(i);
-	}
+	for (const auto i : IterableSplitString(contents, '\n'))
+		f(Strip(i));
 }
 
 template<typename F>
 static void
 ForEachNameValue(FileDescriptor directory_fd, const char *filename, F &&f)
 {
-	ForEachTextLine(directory_fd, filename, [&f](StringView line){
-		auto s = line.Split(' ');
-		if (!s.first.empty() && !s.second.IsNull())
-			f(s.first, s.second);
+	ForEachTextLine(directory_fd, filename, [&f](std::string_view line){
+		auto [a, b] = Split(line, ' ');
+		if (!a.empty() && b.data() != nullptr)
+			f(a, b);
 	});
 }
 
@@ -227,25 +220,24 @@ Substitute(char *dest, const char *src, const char *a, const char *b) noexcept
 }
 
 static auto
-ParsePressureLine(StringView line)
+ParsePressureLine(std::string_view line)
 {
 	static constexpr double micro_factor = 1e-6;
 
 	CgroupPressureItemValues result;
 
-	for (StringView i : IterableSplitString(line, ' ')) {
-		StringView name, value;
-		std::tie(name, value) = i.Split('=');
-		if (value.IsNull())
+	for (std::string_view i : IterableSplitString(line, ' ')) {
+		const auto [name, value] = Split(i, '=');
+		if (value.data() == nullptr)
 			continue;
 
-		if (name.Equals("avg10"))
+		if (name == "avg10"sv)
 			result.avg10 = ParseDouble(value);
-		else if (name.Equals("avg60"))
+		else if (name == "avg60"sv)
 			result.avg60 = ParseDouble(value);
-		else if (name.Equals("avg300"))
+		else if (name == "avg300"sv)
 			result.avg300 = ParseDouble(value);
-		else if (name.Equals("total"))
+		else if (name == "total"sv)
 			result.stall_time = ParseUint64(value) * micro_factor;
 	}
 
@@ -257,14 +249,13 @@ ReadPressureFile(FileDescriptor directory_fd, const char *filename)
 {
 	CgroupPressureValues result;
 
-	ForEachTextLine(directory_fd, filename, [&result](auto line){
-		StringView s;
-		std::tie(s, line) = line.Split(' ');
+	ForEachTextLine(directory_fd, filename, [&result](const auto line){
+		const auto [s, rest] = Split(line, ' ');
 
-		if (s.Equals("some"))
-			result.some = ParsePressureLine(line);
-		else if (s.Equals("full"))
-			result.full = ParsePressureLine(line);
+		if (s == "some"sv)
+			result.some = ParsePressureLine(rest);
+		else if (s == "full"sv)
+			result.full = ParsePressureLine(rest);
 	});
 
 	return result;
@@ -294,19 +285,19 @@ WalkContext::HandleRegularFile(FileDescriptor parent_fd, const char *base)
 	} else if (StringIsEqual(base, "cpuacct.stat")) {
 		// cgroup1
 		ForEachNameValue(parent_fd, base, [&group](auto name, auto value){
-			if (name.Equals("user"))
+			if (name == "user"sv)
 				group.cpuacct.user = ParseUserHz(value);
-			else if (name.Equals("system"))
+			else if (name == "system"sv)
 				group.cpuacct.system = ParseUserHz(value);
 		});
 	} else if (StringIsEqual(base, "cpu.stat")) {
 		// cgroup2
 		ForEachNameValue(parent_fd, base, [&group](auto name, auto value){
-			if (name.Equals("usage_usec"))
+			if (name == "usage_usec"sv)
 				group.cpuacct.usage = ParseUsec(value);
-			else if (name.Equals("user_usec"))
+			else if (name == "user_usec"sv)
 				group.cpuacct.user = ParseUsec(value);
-			else if (name.Equals("system_usec"))
+			else if (name == "system_usec"sv)
 				group.cpuacct.system = ParseUsec(value);
 		});
 	} else if (/* cgroup1 */
@@ -325,11 +316,11 @@ WalkContext::HandleRegularFile(FileDescriptor parent_fd, const char *base)
 		group.memory.memsw_usage = ReadUint64File(parent_fd, base);
 	} else if (StringIsEqual(base, "memory.stat")) {
 		ForEachNameValue(parent_fd, base, [&group](auto name, auto value){
-			if (name.EndsWith("_limit"))
+			if (name.ends_with("_limit"sv))
 				/* skip hierarchical_memory_limit */
 				return;
 
-			group.memory.stat[ToString(name)] = ParseUint64(value);
+			group.memory.stat[std::string{name}] = ParseUint64(value);
 		});
 	} else if (StringIsEqual(base, "pids.current")) {
 		group.pids.current = ReadUint64File(parent_fd, base);

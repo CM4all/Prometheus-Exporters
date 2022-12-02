@@ -60,7 +60,7 @@ ReadTextFile(FileDescriptor directory_fd, const char *filename)
 	char buffer[buffer_size];
 	auto value = ReadTextFile(OpenReadOnly(directory_fd, filename),
 				  buffer, buffer_size);
-	return {value.data, value.size};
+	return std::string{value};
 }
 
 struct ProcessStatus {
@@ -95,7 +95,7 @@ ParseProcessStatus(std::string_view text)
 }
 
 struct ProcessStat {
-	StringView comm;
+	std::string_view comm;
 	char state = 0;
 	unsigned long minflt = 0, majflt = 0;
 	unsigned long utime = 0, stime = 0;
@@ -103,61 +103,60 @@ struct ProcessStat {
 };
 
 static auto
-ParseProcessStat(StringView text)
+ParseProcessStat(std::string_view text)
 {
 	ProcessStat result;
 
-	StringView s;
+	std::string_view s;
 
-	std::tie(s, text) = text.Split(' '); // pid
+	std::tie(s, text) = Split(text, ' '); // pid
 
-	std::tie(s, text) = text.Split(' '); // comm
+	std::tie(s, text) = Split(text, ' '); // comm
 	if (!s.empty() && s.front() == '(' && s.back() == ')') {
-		s.pop_front();
-		s.pop_back();
+		s = s.substr(1, s.size() - 2);
 	}
 
 	result.comm = s;
 
-	std::tie(s, text) = text.Split(' '); // state
+	std::tie(s, text) = Split(text, ' '); // state
 	if (!s.empty())
 		result.state = s.front();
 
-	std::tie(s, text) = text.Split(' '); // ppid
-	std::tie(s, text) = text.Split(' '); // pgrp
-	std::tie(s, text) = text.Split(' '); // session
-	std::tie(s, text) = text.Split(' '); // tty_nr
-	std::tie(s, text) = text.Split(' '); // tpgid
-	std::tie(s, text) = text.Split(' '); // flags
+	std::tie(s, text) = Split(text, ' '); // ppid
+	std::tie(s, text) = Split(text, ' '); // pgrp
+	std::tie(s, text) = Split(text, ' '); // session
+	std::tie(s, text) = Split(text, ' '); // tty_nr
+	std::tie(s, text) = Split(text, ' '); // tpgid
+	std::tie(s, text) = Split(text, ' '); // flags
 
-	std::tie(s, text) = text.Split(' '); // minflt
+	std::tie(s, text) = Split(text, ' '); // minflt
 	result.minflt = ParseUnsignedLong(s);
 
-	std::tie(s, text) = text.Split(' '); // cminflt
+	std::tie(s, text) = Split(text, ' '); // cminflt
 
-	std::tie(s, text) = text.Split(' '); // majflt
+	std::tie(s, text) = Split(text, ' '); // majflt
 	result.majflt = ParseUnsignedLong(s);
 
-	std::tie(s, text) = text.Split(' '); // cmajflt
+	std::tie(s, text) = Split(text, ' '); // cmajflt
 
-	std::tie(s, text) = text.Split(' '); // utime
+	std::tie(s, text) = Split(text, ' '); // utime
 	result.utime = ParseUnsignedLong(s);
 
-	std::tie(s, text) = text.Split(' '); // stime
+	std::tie(s, text) = Split(text, ' '); // stime
 	result.stime = ParseUnsignedLong(s);
 
-	std::tie(s, text) = text.Split(' '); // cutime
-	std::tie(s, text) = text.Split(' '); // cstime
-	std::tie(s, text) = text.Split(' '); // priority
-	std::tie(s, text) = text.Split(' '); // nice
-	std::tie(s, text) = text.Split(' '); // num_threads
-	std::tie(s, text) = text.Split(' '); // itrealvalue
-	std::tie(s, text) = text.Split(' '); // starttime
+	std::tie(s, text) = Split(text, ' '); // cutime
+	std::tie(s, text) = Split(text, ' '); // cstime
+	std::tie(s, text) = Split(text, ' '); // priority
+	std::tie(s, text) = Split(text, ' '); // nice
+	std::tie(s, text) = Split(text, ' '); // num_threads
+	std::tie(s, text) = Split(text, ' '); // itrealvalue
+	std::tie(s, text) = Split(text, ' '); // starttime
 
-	std::tie(s, text) = text.Split(' '); // vsize
+	std::tie(s, text) = Split(text, ' '); // vsize
 	result.vsize = ParseUnsignedLong(s);
 
-	std::tie(s, text) = text.Split(' '); // rss
+	std::tie(s, text) = Split(text, ' '); // rss
 	result.rss = ParseUnsignedLong(s);
 
 	return result;
@@ -219,12 +218,13 @@ CollectProcessGroups(const ProcessExporterConfig &config, FileDescriptor proc_fd
 		if (rl < 0 || size_t(rl) >= sizeof(exe))
 			return;
 
-		StringView name(exe, rl);
-		name.RemoveSuffix(" (deleted)");
+		std::string_view name(exe, rl);
+		RemoveSuffix(name, " (deleted)"sv);
 
-		const char *slash = name.FindLast('/');
-		if (slash != nullptr)
-			name.MoveFront(slash + 1);
+		auto slash = SplitLast(name, '/');
+		if (slash.second.data() != nullptr)
+			name = slash.second;
+
 		if (name.empty())
 			return;
 
@@ -235,8 +235,8 @@ CollectProcessGroups(const ProcessExporterConfig &config, FileDescriptor proc_fd
 						      sizeof(stat_buffer)));
 
 		ProcessInfo info;
-		info.comm = {stat.comm.data, stat.comm.size};
-		info.exe = {name.data, name.size};
+		info.comm = std::string{stat.comm};
+		info.exe = std::string{name};
 		info.cmdline = ReadTextFile<4096>(pid_fd, "cmdline");
 		std::replace(info.cmdline.begin(), info.cmdline.end(),
 			     '\0', ' ');

@@ -41,7 +41,7 @@
 #include "util/IterableSplitString.hxx"
 #include "util/PrintException.hxx"
 #include "util/StringCompare.hxx"
-#include "util/StringView.hxx"
+#include "util/StringSplit.hxx"
 
 #include <algorithm>
 #include <cstdlib>
@@ -52,6 +52,8 @@
 #include <inttypes.h>
 #include <string.h>
 #include <sys/stat.h>
+
+using std::string_view_literals::operator""sv;
 
 static void
 ExportLoadAverage(BufferedOutputStream &os)
@@ -64,13 +66,13 @@ ExportLoadAverage(BufferedOutputStream &os)
 # TYPE loadavg gauge
 )");
 
-	auto [load1s, rest1] = s.Split(' ');
+	auto [load1s, rest1] = Split(s, ' ');
 	const double load1 = ParseDouble(load1s);
 
-	auto [load5s, rest5] = rest1.Split(' ');
+	auto [load5s, rest5] = Split(rest1, ' ');
 	const double load5 = ParseDouble(load5s);
 
-	auto [load15s, rest15] = rest5.Split(' ');
+	auto [load15s, rest15] = Split(rest5, ' ');
 	const double load15 = ParseDouble(load15s);
 
 	os.Format(R"(loadavg{period="1m"} %e
@@ -90,21 +92,21 @@ ExportMemInfo(BufferedOutputStream &os)
 # TYPE meminfo gauge
 )");
 
-	for (const StringView line : IterableSplitString(s, '\n')) {
-		auto [name, value] = line.Split(':');
+	for (const auto line : IterableSplitString(s, '\n')) {
+		auto [name, value] = Split(line, ':');
 		if (name.empty())
 			continue;
 
-		value.Strip();
+		value = Strip(value);
 		if (value.empty())
 			continue;
 
 		uint64_t unit = 1;
-		if (value.RemoveSuffix(" kB"))
+		if (RemoveSuffix(value, " kB"sv))
 			unit = 1024;
 
 		os.Format("meminfo{name=\"%.*s\"} %" PRIu64 "\n",
-			  int(name.size), name.data,
+			  int(name.size()), name.data(),
 			  ParseUint64(value) * unit);
 	}
 }
@@ -120,11 +122,11 @@ ExportVmStat(BufferedOutputStream &os)
 # TYPE vmstat untyped
 )");
 
-	for (const StringView line : IterableSplitString(s, '\n')) {
-		auto [name, value] = line.Split(' ');
+	for (const auto line : IterableSplitString(s, '\n')) {
+		auto [name, value] = Split(line, ' ');
 		if (!name.empty() && !value.empty())
 			os.Format("vmstat{name=\"%.*s\"} %" PRIu64 "\n",
-				  int(name.size), name.data,
+				  int(name.size()), name.data(),
 				  ParseUint64(value));
 	}
 }

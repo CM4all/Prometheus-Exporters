@@ -34,11 +34,10 @@
 #include "io/Open.hxx"
 #include "io/UniqueFileDescriptor.hxx"
 #include "system/Error.hxx"
-#include "util/StringView.hxx"
 
 #include <stdexcept>
 
-StringView
+std::string_view
 ReadTextFile(FileDescriptor fd, char *buffer, std::size_t buffer_size)
 {
 	ssize_t nbytes = fd.Read(buffer, buffer_size);
@@ -54,7 +53,7 @@ ReadTextFile(FileDescriptor fd, char *buffer, std::size_t buffer_size)
 	return {buffer, size};
 }
 
-StringView
+std::string_view
 ReadTextFile(FileDescriptor directory_fd, const char *filename,
 	     char *buffer, std::size_t buffer_size)
 {
