@@ -5,7 +5,7 @@ cm4all-prometheus-exporters (0.6) unstable; urgency=low
   * debian: remove unused Boost dependency
   * debian: switch to PCRE2
 
- --   
+ -- Max Kellermann <mk@cm4all.com>  Fri, 02 Dec 2022 22:50:57 +0100
 
 cm4all-prometheus-exporters (0.5) unstable; urgency=low
 
