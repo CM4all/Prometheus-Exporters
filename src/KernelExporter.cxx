@@ -159,6 +159,64 @@ ExportVmStat(BufferedOutputStream &os, std::string_view s)
 	}
 }
 
+static void
+ExportProcNetDev(BufferedOutputStream &os, std::string_view s)
+{
+	static constexpr const char *proc_net_dev_columns[] = {
+		"receive_bytes",
+		"receive_packets",
+		"receive_errors",
+		"receive_dropped",
+		"receive_fifo",
+		"receive_frame",
+		"receive_compressed",
+		"receive_multicast",
+		"transmit_bytes",
+		"transmit_packets",
+		"transmit_errors",
+		"transmit_dropped",
+		"transmit_fifo",
+		"transmit_colls",
+		"transmit_carrier",
+		"transmit_compressed",
+		nullptr
+	};
+
+	bool first = true;
+	for (const auto line : IterableSplitString(s, '\n')) {
+		auto [device, values] = Split(line, ':');
+		if (device.empty() || values.empty())
+			continue;
+
+		device = StripLeft(device);
+
+		for (const char *const* c = proc_net_dev_columns;
+		     *c != nullptr; ++c) {
+			const char *name = *c;
+
+			auto [value_s, rest] = Split(StripLeft(values), ' ');
+			if (value_s.empty())
+				break;
+
+			values = StripLeft(rest);
+
+			const uint64_t value = ParseUint64(value_s);
+
+			if (first)
+				os.Format(R"(# HELP node_network_%s_total Network device statistic %s.
+# TYPE node_network_%s_total counter
+)",
+					  name, name, name);
+
+			os.Format("node_network_%s_total{device=\"%.*s\"} %" PRIu64 "\n",
+				  name, int(device.size()), device.data(),
+				  value);
+		}
+
+		first = false;
+	}
+}
+
 template<std::size_t buffer_size>
 static void
 Export(BufferedOutputStream &os, auto &&file,
@@ -217,6 +275,7 @@ ExportKernel(BufferedOutputStream &os)
 	Export<256>(os, "/proc/loadavg", ExportLoadAverage);
 	Export<8192>(os, "/proc/meminfo", ExportMemInfo);
 	Export<16384>(os, "/proc/vmstat", ExportVmStat);
+	Export<16384>(os, "/proc/net/dev", ExportProcNetDev);
 	ExportPressure(os);
 }
 
