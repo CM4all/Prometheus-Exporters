@@ -97,7 +97,6 @@ inc = include_directories('src', 'libcommon/src')
 
 libcommon_enable_c = false
 libcommon_enable_DefaultFifoBuffer = false
-libcommon_enable_event = false
 
 subdir('libcommon/src/util')
 subdir('libcommon/src/time')
