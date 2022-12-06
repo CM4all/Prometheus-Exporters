@@ -371,12 +371,12 @@ try {
 
 	if (some_name != nullptr && data.some.stall_time >= 0)
 		os.Format("# HELP %s\n# TYPE %s gauge\n%s %e\n",
-			  some_name, some_help, some_name,
+			  some_help, some_name, some_name,
 			  data.some.stall_time);
 
 	if (full_name != nullptr && data.full.stall_time >= 0)
 		os.Format("# HELP %s\n# TYPE %s gauge\n%s %e\n",
-			  full_name, full_help, full_name,
+			  full_help, full_name, full_name,
 			  data.full.stall_time);
 } catch (const std::system_error &e) {
 	if (!IsFileNotFound(e))
