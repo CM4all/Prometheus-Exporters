@@ -31,6 +31,7 @@
  */
 
 #include "Frontend.hxx"
+#include "Syntax.hxx"
 #include "NumberParser.hxx"
 #include "Pressure.hxx"
 #include "system/Error.hxx"
@@ -94,9 +95,11 @@ ExportMemInfo(BufferedOutputStream &os, std::string_view s)
 )");
 
 	for (const auto line : IterableSplitString(s, '\n')) {
-		auto [name, value] = Split(line, ':');
-		if (name.empty())
+		auto [_name, value] = Split(line, ':');
+		if (_name.empty())
 			continue;
+
+		const auto name = SanitizeMetricName(_name);
 
 		value = Strip(value);
 		if (value.empty())

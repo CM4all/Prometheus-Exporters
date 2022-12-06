@@ -110,6 +110,7 @@ subdir('libcommon/src/lib/zlib')
 frontend = static_library(
   'frontend',
   'src/Frontend.cxx',
+  'src/Syntax.cxx',
   include_directories: inc,
   dependencies: [
     io_dep,
