@@ -21,6 +21,13 @@
 
 using std::string_view_literals::operator""sv;
 
+static inline auto
+ParseUserHz(std::string_view text)
+{
+	static const double user_hz_to_seconds = 1.0 / sysconf(_SC_CLK_TCK);
+	return ParseUint64(text) * user_hz_to_seconds;
+}
+
 static void
 ExportLoadAverage(BufferedOutputStream &os, std::string_view s)
 {
@@ -143,10 +150,12 @@ ExportStat(BufferedOutputStream &os, std::string_view s)
 
 				values = rest;
 
-				os.Format("node_cpu_seconds_total{cpu=\"%.*s\",mode=\"%s\"} %.*s\n",
+				const double seconds = ParseUserHz(value);
+
+				os.Format("node_cpu_seconds_total{cpu=\"%.*s\",mode=\"%s\"} %e\n",
 					  int(name.size()), name.data(),
 					  mode,
-					  int(value.size()), value.data());
+					  seconds);
 			}
 		} else if (name == "intr"sv) {
 			auto value = Split(values, ' ').first;
