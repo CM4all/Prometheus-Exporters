@@ -121,6 +121,8 @@ ExportStat(BufferedOutputStream &os, std::string_view s)
 # TYPE node_intr_total counter
 # HELP node_context_switches_total Total number of context switches.
 # TYPE node_context_switches_total counter
+# HELP node_forks_total Total number of forks.
+# TYPE node_forks_total counter
 # HELP node_procs_blocked Number of processes blocked waiting for I/O to complete.
 # TYPE node_procs_blocked gauge
 # HELP node_procs_running Number of processes in runnable state.
@@ -165,6 +167,11 @@ ExportStat(BufferedOutputStream &os, std::string_view s)
 			auto value = Split(values, ' ').first;
 			if (!value.empty())
 				os.Format("node_context_switches_total %.*s\n", int(value.size()), value.data());
+		} else if (name == "processes"sv || name == "procs_blocked") {
+			auto value = Split(values, ' ').first;
+			if (!value.empty())
+				os.Format("node_forks_total %.*s\n",
+					  int(value.size()), value.data());
 		} else if (name == "procs_running"sv || name == "procs_blocked") {
 			auto value = Split(values, ' ').first;
 			if (!value.empty())
