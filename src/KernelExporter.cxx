@@ -101,6 +101,71 @@ ExportMemInfo(BufferedOutputStream &os, std::string_view s)
 	}
 }
 
+/**
+ * @see https://www.kernel.org/doc/html/latest/filesystems/proc.html#miscellaneous-kernel-statistics-in-proc-stat
+ */
+static void
+ExportStat(BufferedOutputStream &os, std::string_view s)
+{
+	os.Write(R"(
+# HELP node_cpu_seconds_total Seconds the CPUs spent in each mode.
+# TYPE node_cpu_seconds_total counter
+# HELP node_intr_total Total number of interrupts serviced.
+# TYPE node_intr_total counter
+# HELP node_context_switches_total Total number of context switches.
+# TYPE node_context_switches_total counter
+# HELP node_procs_blocked Number of processes blocked waiting for I/O to complete.
+# TYPE node_procs_blocked gauge
+# HELP node_procs_running Number of processes in runnable state.
+# TYPE node_procs_running gauge
+)");
+
+	for (const auto line : IterableSplitString(s, '\n')) {
+		auto [name, values] = Split(line, ' ');
+		if (name.empty() || values.empty())
+			continue;
+
+		if (SkipPrefix(name, "cpu"sv)) {
+			if (name.empty())
+				continue;
+
+			static constexpr std::array cpu_columns = {
+				"user", "nice", "system", "idle", "iowait",
+				"irq", "softirq",
+				"steal",
+				"guest", "guest_nice",
+			};
+
+			for (const char *mode : cpu_columns) {
+				auto [value, rest] = Split(values, ' ');
+				if (value.empty())
+					break;
+
+				values = rest;
+
+				os.Format("node_cpu_seconds_total{cpu=\"%.*s\",mode=\"%s\"} %.*s\n",
+					  int(name.size()), name.data(),
+					  mode,
+					  int(value.size()), value.data());
+			}
+		} else if (name == "intr"sv) {
+			auto value = Split(values, ' ').first;
+			if (!value.empty())
+				os.Format("node_intr_total %.*s\n", int(value.size()), value.data());
+		} else if (name == "ctxt"sv) {
+			auto value = Split(values, ' ').first;
+			if (!value.empty())
+				os.Format("node_context_switches_total %.*s\n", int(value.size()), value.data());
+		} else if (name == "procs_running"sv || name == "procs_blocked") {
+			auto value = Split(values, ' ').first;
+			if (!value.empty())
+				os.Format("node_%.*s %.*s\n",
+					  int(name.size()), name.data(),
+					  int(value.size()), value.data());
+		}
+	}
+}
+
 static void
 ExportVmStat(BufferedOutputStream &os, std::string_view s)
 {
@@ -381,6 +446,7 @@ ExportKernel(BufferedOutputStream &os)
 {
 	Export<256>(os, "/proc/loadavg", ExportLoadAverage);
 	Export<8192>(os, "/proc/meminfo", ExportMemInfo);
+	Export<32768>(os, "/proc/stat", ExportStat);
 	Export<16384>(os, "/proc/vmstat", ExportVmStat);
 	Export<16384>(os, "/proc/net/dev", ExportProcNetDev);
 	Export<16384>(os, "/proc/diskstats", ExportProcDiskstats);
