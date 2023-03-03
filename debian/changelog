@@ -3,7 +3,7 @@ cm4all-prometheus-exporters (0.8) unstable; urgency=low
   * kernel-exporter: show /proc/stat
   * kernel-exporter: show /sys/kernel/debug/ceph/*/metrics/size
 
- --   
+ -- Max Kellermann <mk@cm4all.com>  Fri, 03 Mar 2023 17:10:24 +0100
 
 cm4all-prometheus-exporters (0.7) unstable; urgency=low
 
