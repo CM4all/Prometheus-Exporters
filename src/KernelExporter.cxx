@@ -8,6 +8,7 @@
 #include "Pressure.hxx"
 #include "system/Error.hxx"
 #include "io/BufferedOutputStream.hxx"
+#include "io/DirectoryReader.hxx"
 #include "io/SmallTextFile.hxx"
 #include "util/IterableSplitString.hxx"
 #include "util/PrintException.hxx"
@@ -458,6 +459,78 @@ ExportPressure(BufferedOutputStream &os)
 }
 
 static void
+ExportCephSize(BufferedOutputStream &os, std::string_view fsid, std::string_view contents)
+{
+	// remove the header and the separator
+	contents = Split(Split(contents, '\n').second, '\n').second;
+
+	for (const auto line : IterableSplitString(contents, '\n')) {
+		auto [item, values] = Split(line, ' ');
+		if (item.empty())
+			continue;
+
+		auto [total, rest] = Split(StripLeft(values), ' ');
+
+		// skip avg_sz
+		rest = Split(StripLeft(rest), ' ').second;
+
+		// skip min_sz
+		rest = Split(StripLeft(rest), ' ').second;
+
+		// skip max_sz
+		rest = Split(StripLeft(rest), ' ').second;
+
+		const auto total_sz = StripLeft(rest);
+
+		if (!total_sz.empty())
+			os.Format("ceph_metrics_size_bytes{fsid=\"%.*s\",item=\"%.*s\"} %.*s\n",
+				  int(fsid.size()), fsid.data(),
+				  int(item.size()), item.data(),
+				  int(total_sz.size()), total_sz.data());
+
+		if (!total.empty())
+			os.Format("ceph_metrics_size_count{fsid=\"%.*s\",item=\"%.*s\"} %.*s\n",
+				  int(fsid.size()), fsid.data(),
+				  int(item.size()), item.data(),
+				  int(total.size()), total.data());
+	}
+}
+
+static void
+ExportCeph(BufferedOutputStream &os)
+{
+	os.Write(R"(
+# HELP ceph_metrics_size_bytes Bytes transferred to/from a Ceph server
+# TYPE ceph_metrics_size_bytes counter
+# HELP ceph_metrics_size_count Number of operations to/from a Ceph server
+# TYPE ceph_metrics_size_count counter
+)");
+
+	UniqueFileDescriptor d;
+	if (!d.Open("/sys/kernel/debug/ceph", O_DIRECTORY|O_RDONLY))
+		return;
+
+	DirectoryReader dr{std::move(d)};
+	while (auto name = dr.Read()) {
+		const auto fsid = Split(std::string_view{name}, '.').first;
+		if (fsid.empty())
+			continue;
+
+		UniqueFileDescriptor subdir;
+		if (!subdir.Open(dr.GetFileDescriptor(), name, O_PATH))
+			continue;
+
+		UniqueFileDescriptor f;
+		if (f.OpenReadOnly(subdir, "metrics/size")) {
+			char buffer[4096];
+			ssize_t nbytes = f.Read(buffer, sizeof(buffer));
+			if (nbytes > 0)
+				ExportCephSize(os, fsid, std::string_view(buffer, nbytes));
+		}
+	}
+}
+
+static void
 ExportKernel(BufferedOutputStream &os)
 {
 	Export<256>(os, "/proc/loadavg", ExportLoadAverage);
@@ -467,6 +540,7 @@ ExportKernel(BufferedOutputStream &os)
 	Export<16384>(os, "/proc/net/dev", ExportProcNetDev);
 	Export<16384>(os, "/proc/diskstats", ExportProcDiskstats);
 	ExportPressure(os);
+	ExportCeph(os);
 }
 
 int
