@@ -99,6 +99,7 @@ libcommon_enable_c = false
 libcommon_enable_DefaultFifoBuffer = false
 
 subdir('libcommon/src/util')
+subdir('libcommon/src/lib/fmt')
 subdir('libcommon/src/time')
 subdir('libcommon/src/http')
 subdir('libcommon/src/lib/pcre')

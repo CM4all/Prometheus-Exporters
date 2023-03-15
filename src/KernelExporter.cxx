@@ -18,7 +18,6 @@
 #include <cstdlib>
 
 #include <fcntl.h>
-#include <inttypes.h>
 
 using std::string_view_literals::operator""sv;
 
@@ -47,22 +46,22 @@ ExportLoadAverage(BufferedOutputStream &os, std::string_view s)
 
 	/* obsolete (proprietary) output format */
 
-	os.Format(R"(loadavg{period="1m"} %e
-loadavg{period="5m"} %e
-loadavg{period="15m"} %e
+	os.Fmt(R"(loadavg{{period="1m"}} {:e}
+loadavg{{period="5m"}} {:e}
+loadavg{{period="15m"}} {:e}
 )", load1, load5, load15);
 
 	/* same output format as node_exporter */
 
-	os.Format(R"(# HELP node_load1 1m load average.
+	os.Fmt(R"(# HELP node_load1 1m load average.
 # TYPE node_load1 gauge
-node_load1 %e
+node_load1 {:e}
 # HELP node_load15 15m load average.
 # TYPE node_load15 gauge
-node_load15 %e
+node_load15 {:e}
 # HELP node_load5 5m load average.
 # TYPE node_load5 gauge
-node_load5 %e
+node_load5 {:e}
 )", load1, load5, load15);
 }
 
@@ -92,20 +91,14 @@ ExportMemInfo(BufferedOutputStream &os, std::string_view s)
 		const uint64_t nbytes = ParseUint64(value) * unit;
 
 		/* obsolete (proprietary) output format */
-		os.Format("meminfo{name=\"%.*s\"} %" PRIu64 "\n",
-			  int(name.size()), name.data(),
-			  nbytes);
+		os.Fmt("meminfo{{name=\"{}\"}} {}\n", name, nbytes);
 
 		/* same output format as node_exporter */
-		os.Format(R"(# HELP node_memory_%.*s_bytes Memory information field %.*s_bytes.
-# TYPE node_memory_%.*s_bytes gauge
-)"
-			  "node_memory_%.*s_bytes %" PRIu64 "\n",
-			  int(name.size()), name.data(),
-			  int(name.size()), name.data(),
-			  int(name.size()), name.data(),
-			  int(name.size()), name.data(),
-			  nbytes);
+		os.Fmt(R"(# HELP node_memory_{}_bytes Memory information field {}_bytes.
+# TYPE node_memory_{}_bytes gauge
+node_memory_{}_bytes {}
+)",
+		       name, name, name, name, nbytes);
 	}
 }
 
@@ -155,30 +148,25 @@ ExportStat(BufferedOutputStream &os, std::string_view s)
 
 				const double seconds = ParseUserHz(value);
 
-				os.Format("node_cpu_seconds_total{cpu=\"%.*s\",mode=\"%s\"} %e\n",
-					  int(name.size()), name.data(),
-					  mode,
-					  seconds);
+				os.Fmt("node_cpu_seconds_total{{cpu=\"{}\",mode=\"{}\"}} {:e}\n",
+				       name, mode, seconds);
 			}
 		} else if (name == "intr"sv) {
 			auto value = Split(values, ' ').first;
 			if (!value.empty())
-				os.Format("node_intr_total %.*s\n", int(value.size()), value.data());
+				os.Fmt("node_intr_total {}\n", value);
 		} else if (name == "ctxt"sv) {
 			auto value = Split(values, ' ').first;
 			if (!value.empty())
-				os.Format("node_context_switches_total %.*s\n", int(value.size()), value.data());
+				os.Fmt("node_context_switches_total {}\n", value);
 		} else if (name == "processes"sv || name == "procs_blocked") {
 			auto value = Split(values, ' ').first;
 			if (!value.empty())
-				os.Format("node_forks_total %.*s\n",
-					  int(value.size()), value.data());
+				os.Fmt("node_forks_total {}\n", value);
 		} else if (name == "procs_running"sv || name == "procs_blocked") {
 			auto value = Split(values, ' ').first;
 			if (!value.empty())
-				os.Format("node_%.*s %.*s\n",
-					  int(name.size()), name.data(),
-					  int(value.size()), value.data());
+				os.Fmt("node_{} {}\n", name, value);
 		}
 	}
 }
@@ -199,20 +187,14 @@ ExportVmStat(BufferedOutputStream &os, std::string_view s)
 		const uint64_t v = ParseUint64(value);
 
 		/* obsolete (proprietary) output format */
-		os.Format("vmstat{name=\"%.*s\"} %" PRIu64 "\n",
-			  int(name.size()), name.data(),
-			  v);
+		os.Fmt("vmstat{{name=\"{}\"}} {}\n", name, v);
 
 		/* same output format as node_exporter */
-		os.Format(R"(# HELP node_vmstat_%.*s /proc/vmstat information field %.*s.
-# TYPE node_vmstat_%.*s untyped
-)"
-			  "node_vmstat_%.*s %" PRIu64 "\n",
-			  int(name.size()), name.data(),
-			  int(name.size()), name.data(),
-			  int(name.size()), name.data(),
-			  int(name.size()), name.data(),
-			  v);
+		os.Fmt(R"(# HELP node_vmstat_{} /proc/vmstat information field {}.
+# TYPE node_vmstat_{} untyped
+node_vmstat_{} {}
+)",
+		       name, name, name, name, v);
 	}
 }
 
@@ -260,14 +242,12 @@ ExportProcNetDev(BufferedOutputStream &os, std::string_view s)
 			const uint64_t value = ParseUint64(value_s);
 
 			if (first)
-				os.Format(R"(# HELP node_network_%s_total Network device statistic %s.
-# TYPE node_network_%s_total counter
+				os.Fmt(R"(# HELP node_network_{}_total Network device statistic {}.
+# TYPE node_network_{}_total counter
 )",
-					  name, name, name);
+				       name, name, name);
 
-			os.Format("node_network_%s_total{device=\"%.*s\"} %" PRIu64 "\n",
-				  name, int(device.size()), device.data(),
-				  value);
+			os.Fmt("node_network_{}_total{{device=\"{}\"}} {}\n", name, device, value);
 		}
 
 		first = false;
@@ -392,14 +372,14 @@ ExportProcDiskstats(BufferedOutputStream &os, std::string_view s)
 			const uint64_t value = ParseUint64(value_s);
 
 			if (first)
-				os.Format(R"(# HELP node_disk_%s %s
-# TYPE node_disk_%s %s
+				os.Fmt(R"(# HELP node_disk_{} {}
+# TYPE node_disk_{} {}
 )",
 					  c.name, c.help, c.name, c.type);
 
-			os.Format("node_disk_%s{device=\"%.*s\"} %e\n",
-				  c.name, int(device.size()), device.data(),
-				  value * c.factor);
+			os.Fmt("node_disk_{}{{device=\"{}\"}} {:e}\n",
+			       c.name, device,
+			       value * c.factor);
 		}
 
 		first = false;
@@ -424,14 +404,14 @@ try {
 	auto data = ReadPressureFile(file);
 
 	if (some_name != nullptr && data.some.stall_time >= 0)
-		os.Format("# HELP %s\n# TYPE %s gauge\n%s %e\n",
-			  some_help, some_name, some_name,
-			  data.some.stall_time);
+		os.Fmt("# HELP {}\n# TYPE {} gauge\n{} {:e}\n",
+		       some_help, some_name, some_name,
+		       data.some.stall_time);
 
 	if (full_name != nullptr && data.full.stall_time >= 0)
-		os.Format("# HELP %s\n# TYPE %s gauge\n%s %e\n",
-			  full_help, full_name, full_name,
-			  data.full.stall_time);
+		os.Fmt("# HELP {}\n# TYPE {} gauge\n{} {:e}\n",
+		       full_help, full_name, full_name,
+		       data.full.stall_time);
 } catch (const std::system_error &e) {
 	if (!IsFileNotFound(e))
 		throw;
@@ -483,16 +463,12 @@ ExportCephSize(BufferedOutputStream &os, std::string_view fsid, std::string_view
 		const auto total_sz = StripLeft(rest);
 
 		if (!total_sz.empty())
-			os.Format("ceph_metrics_size_bytes{fsid=\"%.*s\",item=\"%.*s\"} %.*s\n",
-				  int(fsid.size()), fsid.data(),
-				  int(item.size()), item.data(),
-				  int(total_sz.size()), total_sz.data());
+			os.Fmt("ceph_metrics_size_bytes{{fsid=\"{}\",item=\"{}\"}} {}\n",
+			       fsid, item, total_sz);
 
 		if (!total.empty())
-			os.Format("ceph_metrics_size_count{fsid=\"%.*s\",item=\"%.*s\"} %.*s\n",
-				  int(fsid.size()), fsid.data(),
-				  int(item.size()), item.data(),
-				  int(total.size()), total.data());
+			os.Fmt("ceph_metrics_size_count{{fsid=\"{}\",item=\"{}\"}} {}\n",
+			       fsid, item, total);
 	}
 }
 
@@ -547,7 +523,7 @@ int
 main(int argc, char **argv) noexcept
 try {
 	if (argc > 1) {
-		fprintf(stderr, "Usage: %s\n", argv[0]);
+		fmt::print(stderr, "Usage: {}\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 
