@@ -28,6 +28,12 @@ ParseUserHz(std::string_view text)
 	return ParseUint64(text) * user_hz_to_seconds;
 }
 
+static inline auto
+ParseNS(std::string_view text) noexcept
+{
+	return ParseUint64(text) * 1e-9;
+}
+
 static void
 ExportLoadAverage(BufferedOutputStream &os, std::string_view s)
 {
@@ -511,6 +517,38 @@ ExportCephSize(BufferedOutputStream &os, std::string_view fsid, std::string_view
 	}
 }
 
+/**
+ * Export /sys/kernel/debug/ceph/.../metrics/counters (only available
+ * in CM4all kernels).
+ */
+static void
+ExportCephCounters(BufferedOutputStream &os, std::string_view fsid, std::string_view contents)
+{
+	// remove the header
+	contents = Split(contents, '\n').second;
+
+	for (const auto line : IterableSplitString(contents, '\n')) {
+		const auto [item, values] = Split(line, ' ');
+		if (item.empty())
+			continue;
+
+		const auto [count, rest1] = Split(values, ' ');
+		if (!count.empty())
+			os.Fmt("ceph_metrics_count{{fsid=\"{}\",item=\"{}\"}} {}\n",
+			       fsid, item, count);
+
+		const auto [size_bytes, rest2] = Split(rest1, ' ');
+		if (!size_bytes.empty())
+			os.Fmt("ceph_metrics_size{{fsid=\"{}\",item=\"{}\"}} {}\n",
+			       fsid, item, size_bytes);
+
+		const auto [wait_ns, rest3] = Split(rest2, ' ');
+		if (!wait_ns.empty())
+			os.Fmt("ceph_metrics_wait{{fsid=\"{}\",item=\"{}\"}} {:e}\n",
+			       fsid, item, ParseNS(wait_ns));
+	}
+}
+
 static void
 ExportCeph(BufferedOutputStream &os)
 {
@@ -519,6 +557,12 @@ ExportCeph(BufferedOutputStream &os)
 # TYPE ceph_metrics_size_bytes counter
 # HELP ceph_metrics_size_count Number of operations to/from a Ceph server
 # TYPE ceph_metrics_size_count counter
+# HELP ceph_metrics_count Total number of operations on this Ceph mount
+# TYPE ceph_metrics_count counter
+# HELP ceph_metrics_size Total number of bytes on this Ceph mount
+# TYPE ceph_metrics_size counter
+# HELP ceph_metrics_wait Total number of seconds waited on this Ceph mount
+# TYPE ceph_metrics_wait counter
 )");
 
 	UniqueFileDescriptor d;
@@ -541,6 +585,17 @@ ExportCeph(BufferedOutputStream &os)
 			ssize_t nbytes = f.Read(buffer, sizeof(buffer));
 			if (nbytes > 0)
 				ExportCephSize(os, fsid, std::string_view(buffer, nbytes));
+
+			f.Close();
+		}
+
+		if (f.OpenReadOnly(subdir, "metrics/counters")) {
+			char buffer[4096];
+			ssize_t nbytes = f.Read(buffer, sizeof(buffer));
+			if (nbytes > 0)
+				ExportCephCounters(os, fsid, std::string_view(buffer, nbytes));
+
+			f.Close();
 		}
 	}
 }
