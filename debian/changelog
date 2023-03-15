@@ -1,5 +1,6 @@
 cm4all-prometheus-exporters (0.9) unstable; urgency=low
 
+  * kernel-exporter: show /proc/net/snmp
   * use libfmt
 
  --   

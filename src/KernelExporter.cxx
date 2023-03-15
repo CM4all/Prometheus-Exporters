@@ -254,6 +254,45 @@ ExportProcNetDev(BufferedOutputStream &os, std::string_view s)
 	}
 }
 
+static void
+ExportProcNetSnmp(BufferedOutputStream &os, std::string_view s)
+{
+	while (true) {
+		auto [label_line, rest1] = Split(s, '\n');
+		auto [values_line, rest2] = Split(rest1, '\n');
+		s = rest2;
+
+		auto [protocol, labels] = Split(label_line, ':');
+		auto [protocol2, values] = Split(values_line, ':');
+
+		if (protocol.empty() || protocol != protocol2)
+			break;
+
+		labels = StripLeft(labels);
+		values = StripLeft(values);
+
+		while (true) {
+			auto [label, more_labels] = Split(labels, ' ');
+			auto [value, more_values] = Split(values, ' ');
+
+			if (label.empty() || value.empty())
+				break;
+
+			labels = more_labels;
+			values = more_values;
+
+			os.Fmt(R"(
+# HELP node_netstat_{}_{} Statistic {}{}.
+# TYPE node_netstat_{}_{} untyped
+node_netstat_{}_{} {}
+)",
+			       protocol, label, protocol, label,
+			       protocol, label,
+			       protocol, label, value);
+		}
+	}
+}
+
 [[gnu::pure]]
 static bool
 IgnoreDisk(std::string_view device) noexcept
@@ -514,6 +553,7 @@ ExportKernel(BufferedOutputStream &os)
 	Export<32768>(os, "/proc/stat", ExportStat);
 	Export<16384>(os, "/proc/vmstat", ExportVmStat);
 	Export<16384>(os, "/proc/net/dev", ExportProcNetDev);
+	Export<8192>(os, "/proc/net/snmp", ExportProcNetSnmp);
 	Export<16384>(os, "/proc/diskstats", ExportProcDiskstats);
 	ExportPressure(os);
 	ExportCeph(os);
