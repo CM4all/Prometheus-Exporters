@@ -225,10 +225,10 @@ DumpProcessGroups(BufferedOutputStream &os, const ProcessGroupMap &groups)
 )");
 
 	for (const auto &i : groups)
-		os.Format("namedprocess_namegroup_context_switches_total{groupname=\"%s\",ctxswitchtype=\"nonvoluntary\"} %u\n"
-			  "namedprocess_namegroup_context_switches_total{groupname=\"%s\",ctxswitchtype=\"voluntary\"} %u\n",
-			  i.first.c_str(), i.second.nonvoluntary_ctxt_switches,
-			  i.first.c_str(), i.second.voluntary_ctxt_switches);
+		os.Fmt("namedprocess_namegroup_context_switches_total{{groupname=\"{}\",ctxswitchtype=\"nonvoluntary\"}} {}\n"
+		       "namedprocess_namegroup_context_switches_total{{groupname=\"{}\",ctxswitchtype=\"voluntary\"}} {}\n",
+		       i.first, i.second.nonvoluntary_ctxt_switches,
+		       i.first, i.second.voluntary_ctxt_switches);
 
 	os.Write(R"(# HELP namedprocess_namegroup_cpu_seconds_total Cpu user usage in seconds
 # TYPE namedprocess_namegroup_cpu_seconds_total counter
@@ -237,10 +237,10 @@ DumpProcessGroups(BufferedOutputStream &os, const ProcessGroupMap &groups)
 	const double clock_ticks_to_s = double(1) / sysconf(_SC_CLK_TCK);
 
 	for (const auto &i : groups)
-		os.Format("namedprocess_namegroup_cpu_seconds_total{groupname=\"%s\",mode=\"system\"} %e\n"
-			  "namedprocess_namegroup_cpu_seconds_total{groupname=\"%s\",mode=\"user\"} %e\n",
-			  i.first.c_str(), i.second.stime * clock_ticks_to_s,
-			  i.first.c_str(), i.second.utime * clock_ticks_to_s);
+		os.Fmt("namedprocess_namegroup_cpu_seconds_total{{groupname=\"{}\",mode=\"system\"}} {:e}\n"
+		       "namedprocess_namegroup_cpu_seconds_total{{groupname=\"{}\",mode=\"user\"}} {:e}\n",
+		       i.first, i.second.stime * clock_ticks_to_s,
+		       i.first, i.second.utime * clock_ticks_to_s);
 
 	os.Write(R"(# HELP namedprocess_namegroup_memory_bytes number of bytes of memory in use
 # TYPE namedprocess_namegroup_memory_bytes gauge
@@ -249,34 +249,34 @@ DumpProcessGroups(BufferedOutputStream &os, const ProcessGroupMap &groups)
 	const size_t page_size = sysconf(_SC_PAGESIZE);
 
 	for (const auto &i : groups)
-		os.Format("namedprocess_namegroup_memory_bytes{groupname=\"%s\",memtype=\"resident\"} %lu\n"
-			  "namedprocess_namegroup_memory_bytes{groupname=\"%s\",memtype=\"virtual\"} %lu\n",
-			  i.first.c_str(), i.second.vsize,
-			  i.first.c_str(), i.second.rss * page_size);
+		os.Fmt("namedprocess_namegroup_memory_bytes{{groupname=\"{}\",memtype=\"resident\"}} {}\n"
+		       "namedprocess_namegroup_memory_bytes{{groupname=\"{}\",memtype=\"virtual\"}} {}\n",
+		       i.first, i.second.vsize,
+		       i.first, i.second.rss * page_size);
 
 	os.Write(R"(# HELP namedprocess_namegroup_minor_page_faults_total Minor page faults
 # TYPE namedprocess_namegroup_minor_page_faults_total counter
 )");
 
 	for (const auto &i : groups)
-		os.Format("namedprocess_namegroup_minor_page_faults_total{groupname=\"%s\"} %lu\n",
-			  i.first.c_str(), i.second.minflt);
+		os.Fmt("namedprocess_namegroup_minor_page_faults_total{{groupname=\"{}\"}} %lu\n",
+		       i.first, i.second.minflt);
 
 	os.Write(R"(# HELP namedprocess_namegroup_num_procs number of processes in this group
 # TYPE namedprocess_namegroup_num_procs gauge
 )");
 
 	for (const auto &i : groups)
-		os.Format("namedprocess_namegroup_num_procs{groupname=\"%s\"} %u\n",
-			  i.first.c_str(), i.second.n_procs);
+		os.Fmt("namedprocess_namegroup_num_procs{{groupname=\"{}\"}} {}\n",
+		       i.first, i.second.n_procs);
 
 	os.Write(R"(# HELP namedprocess_namegroup_num_threads Number of threads
 # TYPE namedprocess_namegroup_num_threads gauge
 )");
 
 	for (const auto &i : groups)
-		os.Format("namedprocess_namegroup_num_threads{groupname=\"%s\"} %u\n",
-			  i.first.c_str(), i.second.n_threads);
+		os.Fmt("namedprocess_namegroup_num_threads{{groupname=\"{}\"}} {}\n",
+		       i.first, i.second.n_threads);
 }
 
 static void
@@ -300,7 +300,7 @@ try {
 		config_file = argv[1];
 
 	if (argc > 2) {
-		fprintf(stderr, "Usage: %s CONFIGFILE\n", argv[0]);
+		fmt::print(stderr, "Usage: {} CONFIGFILE\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 

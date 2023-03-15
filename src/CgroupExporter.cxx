@@ -326,8 +326,8 @@ WriteCpuacct(BufferedOutputStream &os, const char *group, const char *type,
 	     double value)
 {
 	if (value >= 0)
-		os.Format("cgroup_cpu_usage{groupname=\"%s\",type=\"%s\"} %e\n",
-			  group, type, value);
+		os.Fmt("cgroup_cpu_usage{{groupname=\"{}\",type=\"{}\"}} {:e}\n",
+		       group, type, value);
 }
 
 static void
@@ -335,24 +335,24 @@ WriteMemory(BufferedOutputStream &os, const char *group, const char *type,
 	    int64_t value)
 {
 	if (value >= 0)
-		os.Format("cgroup_memory_usage{groupname=\"%s\",type=\"%s\"} %" PRId64 "\n",
-			  group, type, value);
+		os.Fmt("cgroup_memory_usage{{groupname=\"{}\",type=\"{}\"}} {}\n",
+		       group, type, value);
 }
 
 static void
 WriteMemory(BufferedOutputStream &os, const char *group, const char *type,
 	    uint64_t value)
 {
-	os.Format("cgroup_memory_usage{groupname=\"%s\",type=\"%s\"} %" PRIu64 "\n",
-		  group, type, value);
+	os.Fmt("cgroup_memory_usage{{groupname=\"{}\",type=\"{}\"}} {}\n",
+	       group, type, value);
 }
 
 static void
 WritePids(BufferedOutputStream &os, const char *group, int64_t value)
 {
 	if (value >= 0)
-		os.Format("cgroup_pids{groupname=\"%s\"} %" PRId64 "\n",
-			  group, value);
+		os.Fmt("cgroup_pids{{groupname=\"{}\"}} {}\n",
+		       group, value);
 }
 
 static void
@@ -361,8 +361,8 @@ WritePressureRatio(BufferedOutputStream &os, const char *group,
 		   const char *window, double value)
 {
 	if (value >= 0)
-		os.Format("cgroup_pressure_ratio{groupname=\"%s\",resource=\"%s\",type=\"%s\",window=\"%s\"} %e\n",
-			  group, resource, type, window, value);
+		os.Fmt("cgroup_pressure_ratio{{groupname=\"{}\",resource=\"{}\",type=\"{}\",window=\"{}\"}} {:e}\n",
+		       group, resource, type, window, value);
 }
 
 static void
@@ -390,8 +390,8 @@ WritePressureStallTime(BufferedOutputStream &os, const char *group,
 		       double value)
 {
 	if (value >= 0)
-		os.Format("cgroup_pressure_stall_time{groupname=\"%s\",resource=\"%s\",type=\"%s\"} %e\n",
-			  group, resource, type, value);
+		os.Fmt("cgroup_pressure_stall_time{{groupname=\"{}\",resource=\"{}\",type=\"{}\"}} {:e}\n",
+		       group, resource, type, value);
 }
 
 static void
@@ -501,7 +501,7 @@ try {
 		config_file = argv[1];
 
 	if (argc > 2) {
-		fprintf(stderr, "Usage: %s CONFIGFILE\n", argv[0]);
+		fmt::print(stderr, "Usage: {} CONFIGFILE\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 
