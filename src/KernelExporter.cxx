@@ -165,7 +165,7 @@ ExportStat(BufferedOutputStream &os, std::string_view s)
 			auto value = Split(values, ' ').first;
 			if (!value.empty())
 				os.Fmt("node_context_switches_total {}\n", value);
-		} else if (name == "processes"sv || name == "procs_blocked") {
+		} else if (name == "processes"sv) {
 			auto value = Split(values, ' ').first;
 			if (!value.empty())
 				os.Fmt("node_forks_total {}\n", value);
