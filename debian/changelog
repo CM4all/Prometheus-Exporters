@@ -5,7 +5,7 @@ cm4all-prometheus-exporters (0.9) unstable; urgency=low
   * kernel-exporter: fix bug in "procs_blocked" metric
   * use libfmt
 
- --   
+ -- Max Kellermann <mk@cm4all.com>  Thu, 16 Mar 2023 14:50:12 +0100
 
 cm4all-prometheus-exporters (0.8) unstable; urgency=low
 
