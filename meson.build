@@ -95,7 +95,6 @@ libyamlcpp = dependency('yaml-cpp',
 
 inc = include_directories('src', 'libcommon/src')
 
-libcommon_enable_c = false
 libcommon_enable_DefaultFifoBuffer = false
 
 subdir('libcommon/src/util')
