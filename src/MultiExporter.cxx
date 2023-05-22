@@ -7,6 +7,7 @@
 #include "lib/curl/Easy.hxx"
 #include "lib/curl/Init.hxx"
 #include "lib/curl/Multi.hxx"
+#include "util/SpanCast.hxx"
 
 #include <string>
 
@@ -87,7 +88,7 @@ SourceRequest::Done(CURLcode result)
 void
 SourceRequest::WriteTo(BufferedOutputStream &os) const
 {
-	os.Write(value.data(), value.size());
+	os.Write(AsBytes(value));
 }
 
 size_t
