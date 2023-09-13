@@ -1,6 +1,6 @@
 cm4all-prometheus-exporters (0.10) unstable; urgency=low
 
-  * cgroup-exporter: make cm4all-dostree-optimize.slice opaque by default
+  * cgroup-exporter: make cm4all-ostree-optimize.slice opaque by default
 
  --   
 
