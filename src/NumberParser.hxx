@@ -9,6 +9,7 @@
 #include "util/StringStrip.hxx"
 
 #include <cmath>
+#include <cstdint>
 #include <string_view>
 #include <utility>
 
