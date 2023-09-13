@@ -7,15 +7,15 @@
 #include "io/DirectoryReader.hxx"
 #include "io/Open.hxx"
 #include "io/UniqueFileDescriptor.hxx"
-#include "util/Concepts.hxx"
 #include "util/PrintException.hxx"
 
+#include <concepts>
 #include <cstdlib>
 #include <exception>
 
 void
 ForEachProcess(FileDescriptor proc_fd,
-	       Invocable<unsigned, FileDescriptor> auto f)
+	       std::invocable<unsigned, FileDescriptor> auto f)
 {
 	DirectoryReader r(OpenDirectory(proc_fd, "."));
 	while (auto name = r.Read()) {
@@ -39,7 +39,7 @@ ForEachProcess(FileDescriptor proc_fd,
 
 void
 ForEachProcessThread(FileDescriptor pid_fd,
-		     Invocable<unsigned, FileDescriptor> auto f)
+		     std::invocable<unsigned, FileDescriptor> auto f)
 {
 	DirectoryReader r(OpenDirectory(pid_fd, "task"));
 	while (auto name = r.Read()) {
@@ -63,7 +63,7 @@ ForEachProcessThread(FileDescriptor pid_fd,
 
 void
 ForEachThread(FileDescriptor proc_fd,
-	      Invocable<unsigned, FileDescriptor> auto f)
+	      std::invocable<unsigned, FileDescriptor> auto f)
 {
 	ForEachProcess(proc_fd, [&](unsigned, FileDescriptor pid_fd){
 		ForEachProcessThread(pid_fd, f);

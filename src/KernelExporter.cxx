@@ -434,7 +434,7 @@ ExportProcDiskstats(BufferedOutputStream &os, std::string_view s)
 template<std::size_t buffer_size>
 static void
 Export(BufferedOutputStream &os, auto &&file,
-       Invocable<BufferedOutputStream &, std::string_view> auto f)
+       std::invocable<BufferedOutputStream &, std::string_view> auto f)
 {
 	WithSmallTextFile<buffer_size>(file, [&](std::string_view contents){
 		f(os, contents);

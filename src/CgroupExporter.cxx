@@ -12,12 +12,12 @@
 #include "io/Open.hxx"
 #include "io/SmallTextFile.hxx"
 #include "io/UniqueFileDescriptor.hxx"
-#include "util/Concepts.hxx"
 #include "util/IterableSplitString.hxx"
 #include "util/PrintException.hxx"
 #include "util/StringCompare.hxx"
 
 #include <algorithm>
+#include <concepts>
 #include <cstdlib>
 #include <map>
 #include <string>
@@ -57,7 +57,7 @@ ReadDoubleFile(FileAt file, double factor=1.0)
 
 static void
 ForEachNameValue(FileAt file,
-		 Invocable<std::string_view, std::string_view> auto f)
+		 std::invocable<std::string_view, std::string_view> auto f)
 {
 	ForEachTextLine<4096>(file, [&f](std::string_view line){
 		line = Strip(line);

@@ -8,13 +8,13 @@
 #include "io/StringOutputStream.hxx"
 #include "io/BufferedOutputStream.hxx"
 #include "lib/zlib/GzipOutputStream.hxx"
-#include "util/Concepts.hxx"
 #include "util/PrintException.hxx"
 #include "util/ScopeExit.hxx"
 #include "util/SpanCast.hxx"
 
 #include <systemd/sd-daemon.h>
 
+#include <concepts>
 #include <cstddef>
 #include <cstdlib>
 #include <cstdint>
@@ -27,7 +27,7 @@
 #include <unistd.h>
 
 template<typename T>
-concept Handler = Invocable<T, BufferedOutputStream &>;
+concept Handler = std::invocable<T, BufferedOutputStream &>;
 
 int
 RunExporterStdio(Handler auto handler)
