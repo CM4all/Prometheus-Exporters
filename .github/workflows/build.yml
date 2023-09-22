@@ -1,0 +1,51 @@
+---
+on:
+  workflow_dispatch:
+  push:
+    paths-ignore:
+      - 'debian/**'
+      - 'subprojects/**'
+    branches:
+      - master
+  pull_request:
+    paths-ignore:
+      - 'debian/**'
+      - 'subprojects/**'
+    branches:
+      - master
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - id: checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - id: cache-ccache
+        uses: hendrikmuhs/ccache-action@v1
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            meson \
+            zlib1g-dev \
+            libcurl4-openssl-dev \
+            libyaml-cpp-dev \
+            libpcre2-dev \
+            libsystemd-dev
+
+      - name: Configure
+        run: |
+          meson setup \
+            --force-fallback-for=fmt \
+            -Dwrap_mode=nofallback \
+            output
+
+      - name: Build
+        run: ninja -C output -v
