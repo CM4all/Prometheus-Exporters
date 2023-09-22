@@ -9,7 +9,7 @@ Building
 
 You need:
 
-- a C++20 compiler (GCC 10 or clang)
+- a C++20 compiler (e.g. GCC or clang)
 - `meson 0.56 <http://mesonbuild.com/>`__
 - `systemd <https://www.freedesktop.org/wiki/Software/systemd/>`__
 - `yaml-cpp <https://github.com/jbeder/yaml-cpp>`__
