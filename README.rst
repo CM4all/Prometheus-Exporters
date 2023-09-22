@@ -15,6 +15,10 @@ You need:
 - `yaml-cpp <https://github.com/jbeder/yaml-cpp>`__
 - `pcre <https://www.pcre.org/>`__
 
+Get the source code::
+
+ git clone --recursive https://github.com/CM4all/Prometheus-Exporters
+
 To build it, type::
 
   meson . build
