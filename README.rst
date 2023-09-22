@@ -19,7 +19,11 @@ Get the source code::
 
  git clone --recursive https://github.com/CM4all/Prometheus-Exporters
 
-To build it, type::
+Run ``meson``::
 
-  meson . build
-  ninja -C build
+ meson setup output
+
+Compile and install::
+
+ ninja -C output
+ ninja -C output install
