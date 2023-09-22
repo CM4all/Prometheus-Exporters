@@ -1,5 +1,11 @@
 #!/usr/bin/make -f
 # -*- mode: makefile; coding: utf-8 -*-
 
+MESON_OPTIONS = \
+	-Dcurl=enabled
+
 %:
 	dh $@
+
+override_dh_auto_configure:
+	dh_auto_configure -- $(MESON_OPTIONS)

@@ -1,0 +1,2 @@
+option('curl', type: 'feature', description: 'build with CURL')
+option('pcre', type: 'feature', description: 'build with PCRE')

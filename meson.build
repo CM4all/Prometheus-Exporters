@@ -96,6 +96,8 @@ libyamlcpp = dependency('yaml-cpp',
 inc = include_directories('src', 'libcommon/src')
 
 libcommon_enable_DefaultFifoBuffer = false
+libcommon_require_curl = get_option('curl')
+libcommon_require_pcre = get_option('pcre')
 
 subdir('libcommon/src/util')
 subdir('libcommon/src/lib/fmt')
@@ -125,20 +127,22 @@ frontend_dep = declare_dependency(
   ],
 )
 
-executable(
-  'cm4all-process-exporter',
-  'src/ProcessExporter.cxx',
-  'src/ProcessConfig.cxx',
-  include_directories: inc,
-  dependencies: [
-    libsystemd,
-    libyamlcpp,
-    pcre_dep,
-    frontend_dep,
-  ],
-  install: true,
-  install_dir: 'sbin',
-)
+if pcre_dep.found()
+  executable(
+    'cm4all-process-exporter',
+    'src/ProcessExporter.cxx',
+    'src/ProcessConfig.cxx',
+    include_directories: inc,
+    dependencies: [
+      libsystemd,
+      libyamlcpp,
+      pcre_dep,
+      frontend_dep,
+    ],
+    install: true,
+    install_dir: 'sbin',
+  )
+endif
 
 executable(
   'cm4all-kernel-exporter',
@@ -168,18 +172,20 @@ executable(
   install_dir: 'sbin',
 )
 
-executable(
-  'cm4all-multi-exporter',
-  'src/MultiExporter.cxx',
-  'src/MultiConfig.cxx',
-  include_directories: inc,
-  dependencies: [
-    libsystemd,
-    libyamlcpp,
-    curl_dep,
-    frontend_dep,
-    util_dep,
-  ],
-  install: true,
-  install_dir: 'sbin',
-)
+if curl_dep.found()
+  executable(
+    'cm4all-multi-exporter',
+    'src/MultiExporter.cxx',
+    'src/MultiConfig.cxx',
+    include_directories: inc,
+    dependencies: [
+      libsystemd,
+      libyamlcpp,
+      curl_dep,
+      frontend_dep,
+      util_dep,
+    ],
+    install: true,
+    install_dir: 'sbin',
+  )
+endif

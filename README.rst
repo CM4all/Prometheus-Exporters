@@ -14,9 +14,12 @@ You need:
 - `libfmt <https://fmt.dev/>`__
 - `systemd <https://www.freedesktop.org/wiki/Software/systemd/>`__
 - `yaml-cpp <https://github.com/jbeder/yaml-cpp>`__
-- `pcre <https://www.pcre.org/>`__
-- `CURL <https://curl.haxx.se/>`__
 - `zlib <https://zlib.net/>`__
+
+Optional dependencies:
+
+- `CURL <https://curl.haxx.se/>`__
+- `pcre <https://www.pcre.org/>`__
 
 Get the source code::
 
