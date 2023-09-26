@@ -576,7 +576,7 @@ ExportCeph(BufferedOutputStream &os)
 			continue;
 
 		UniqueFileDescriptor subdir;
-		if (!subdir.Open(dr.GetFileDescriptor(), name, O_PATH))
+		if (!subdir.Open(dr.GetFileDescriptor(), name, O_DIRECTORY|O_PATH))
 			continue;
 
 		UniqueFileDescriptor f;
