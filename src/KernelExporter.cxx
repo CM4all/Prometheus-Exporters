@@ -581,19 +581,17 @@ ExportCeph(BufferedOutputStream &os)
 
 		UniqueFileDescriptor f;
 		if (f.OpenReadOnly(subdir, "metrics/size")) {
-			char buffer[4096];
-			ssize_t nbytes = f.Read(buffer, sizeof(buffer));
-			if (nbytes > 0)
-				ExportCephSize(os, fsid, std::string_view(buffer, nbytes));
+			WithSmallTextFile<4096>(f, [&os, fsid](std::string_view contents){
+				ExportCephSize(os, fsid, contents);
+			});
 
 			f.Close();
 		}
 
 		if (f.OpenReadOnly(subdir, "metrics/counters")) {
-			char buffer[4096];
-			ssize_t nbytes = f.Read(buffer, sizeof(buffer));
-			if (nbytes > 0)
-				ExportCephCounters(os, fsid, std::string_view(buffer, nbytes));
+			WithSmallTextFile<4096>(f, [&os, fsid](std::string_view contents){
+				ExportCephCounters(os, fsid, contents);
+			});
 
 			f.Close();
 		}
