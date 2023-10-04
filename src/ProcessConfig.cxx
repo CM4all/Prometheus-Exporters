@@ -71,7 +71,7 @@ LoadProcessNameConfig(const YAML::Node &node)
 	if (cmdline && cmdline.IsSequence())
 		for (const auto &c : cmdline)
 			pn.cmdline.emplace_front(c.as<std::string>().c_str(),
-						 false, false);
+						 Pcre::CompileOptions{});
 
 	return pn;
 }
