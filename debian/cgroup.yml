@@ -1,17 +1,7 @@
 opaque_paths:
-  - system.slice/cm4all-beng-spawn.scope
-  - system.slice/cm4all-openssh.scope
-  - system.slice/cm4all-workshop-spawn.scope
-  - system.slice/system-cm4all.slice/bp-spawn.scope
-  - system.slice/system-cm4all.slice/workshop-spawn.scope
-  - system.slice/system-cm4all.slice/openssh.scope
   - system.slice/system-getty.slice
   - system.slice/system-systemd\x2dfsck.slice
   - system.slice/system-ssh.slice
-  - system.slice/system-cm4all\x2dspawn\x2dnetns.slice
-  - system.slice/system-cm4all\x2dostree\x2dmake.slice
-  - system.slice/system-cm4all\x2dostree\x2doptimize.slice
-  - system.slice/system-cm4all\x2dostree\x2dserver.slice
   - system.slice/system-serial\x2dgetty.slice
   - system.slice/system-postfix.slice
   - user.slice
