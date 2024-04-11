@@ -4,6 +4,8 @@ project('CM4all Prometheus Exporters', ['cpp'], version: '0.10',
     'cpp_std=c++2a',
     'warning_level=3',
 
+    'fmt:cpp_std=c++2a',
+
     # Not interested in compiler warnings from subprojects.
     'yaml-cpp:werror=false',
     'yaml-cpp:warning_level=0',
