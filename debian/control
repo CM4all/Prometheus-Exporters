@@ -18,7 +18,6 @@ Vcs-Git: git@github.com:CM4all/Prometheus-Exporters.git
 Package: cm4all-prometheus-exporters
 Architecture: all
 Depends: cm4all-cgroup-exporter, cm4all-process-exporter,
- cm4all-fs-exporter,
  cm4all-kernel-exporter,
  cm4all-multi-exporter
 Description: Transitional package
