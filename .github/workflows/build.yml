@@ -43,7 +43,7 @@ jobs:
       - name: Configure
         run: |
           meson setup \
-            --force-fallback-for=fmt \
+            --force-fallback-for=fmt,nlohmann_json \
             -Dwrap_mode=nofallback \
             output
 

@@ -106,6 +106,7 @@ subdir('libcommon/src/lib/fmt')
 subdir('libcommon/src/time')
 subdir('libcommon/src/http')
 subdir('libcommon/src/lib/pcre')
+subdir('libcommon/src/lib/nlohmann_json')
 subdir('libcommon/src/io')
 subdir('libcommon/src/lib/curl')
 subdir('libcommon/src/lib/zlib')
@@ -180,6 +181,19 @@ executable(
   dependencies: [
     libsystemd,
     libyamlcpp,
+    frontend_dep,
+  ],
+  install: true,
+  install_dir: 'sbin',
+)
+
+executable(
+  'cm4all-openbgpd-exporter',
+  'src/BgpExporter.cxx',
+  include_directories: inc,
+  dependencies: [
+    nlohmann_json_dep,
+    libsystemd,
     frontend_dep,
   ],
   install: true,

@@ -1,4 +1,5 @@
 /packagecache/
 
 /fmt-*/
+/nlohmann_json-*/
 /yaml-cpp-*/

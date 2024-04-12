@@ -1,0 +1,38 @@
+[Unit]
+Description=CM4all Prometheus openbgpd Exporter
+
+[Service]
+DynamicUser=yes
+
+# Need to be gid=0 to be able to connect to /run/openbgpd/bgpd.sock.0
+Group=root
+
+Type=notify
+ExecStart=/usr/sbin/cm4all-openbgpd-exporter
+Restart=on-failure
+
+CPUSchedulingPolicy=batch
+TimerSlackNSec=1s
+
+# enable crash dumps
+LimitCORE=infinity
+
+# Resource limits
+MemoryMax=32M
+TasksMax=4
+LimitNPROC=4
+LimitNOFILE=4096
+LimitMEMLOCK=16M
+
+# Paranoid security settings
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RemoveIPC=yes
