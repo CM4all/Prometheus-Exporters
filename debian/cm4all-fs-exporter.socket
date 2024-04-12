@@ -1,0 +1,7 @@
+[Unit]
+
+[Socket]
+ListenStream=%t/cm4all/prometheus-exporters/fs.socket
+
+[Install]
+WantedBy=sockets.target

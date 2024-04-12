@@ -147,6 +147,18 @@ if pcre_dep.found()
 endif
 
 executable(
+  'cm4all-fs-exporter',
+  'src/FsExporter.cxx',
+  include_directories: inc,
+  dependencies: [
+    libsystemd,
+    frontend_dep,
+  ],
+  install: true,
+  install_dir: 'sbin',
+)
+
+executable(
   'cm4all-kernel-exporter',
   'src/KernelExporter.cxx',
   'src/Pressure.cxx',

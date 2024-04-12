@@ -18,6 +18,7 @@ Vcs-Git: git@github.com:CM4all/Prometheus-Exporters.git
 Package: cm4all-prometheus-exporters
 Architecture: all
 Depends: cm4all-cgroup-exporter, cm4all-process-exporter,
+ cm4all-fs-exporter,
  cm4all-kernel-exporter,
  cm4all-multi-exporter
 Description: Transitional package
@@ -32,6 +33,15 @@ Replaces: cm4all-prometheus-exporters
 Description: Prometheus Exporter for cgroup statistics
  Contains a Prometheus exporter which exposes cgroup statistics, such
  as per-cgroup CPU and memory usage.
+
+Package: cm4all-fs-exporter
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends},
+ systemd (>= 232~)
+Recommends: libnss-systemd
+Description: Prometheus Exporter for filesystem statistics
+ Contains a Prometheus exporter which exposes statistics about mounted
+ filesystems.
 
 Package: cm4all-kernel-exporter
 Architecture: any
