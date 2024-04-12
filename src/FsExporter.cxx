@@ -3,32 +3,18 @@
 // author: Max Kellermann <mk@cm4all.com>
 
 #include "Frontend.hxx"
-#include "Syntax.hxx"
-#include "NumberParser.hxx"
-#include "Pressure.hxx"
 #include "system/linux/listmount.h"
 #include "system/linux/statmount.h"
-#include "system/Error.hxx"
 #include "io/BufferedOutputStream.hxx"
-#include "io/DirectoryReader.hxx"
-#include "io/SmallTextFile.hxx"
-#include "util/IterableSplitString.hxx"
 #include "util/PrintException.hxx"
-#include "util/StringCompare.hxx"
-#include "util/StringSplit.hxx"
+#include "util/StringAPI.hxx"
 
-#include <cstdlib>
-
-#include <fcntl.h> // for AT_FDCWD
 #include <linux/major.h> // for LOOP_MAJOR
-#include <sys/stat.h> // for statx()
 #include <sys/statfs.h> // for statfs()
 
 #ifndef SB_RDONLY
 #define SB_RDONLY 1
 #endif
-
-using std::string_view_literals::operator""sv;
 
 static std::span<const __u64>
 ListMount(__u64 mnt_id, std::span<__u64> buffer) noexcept
