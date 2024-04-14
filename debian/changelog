@@ -2,7 +2,7 @@ cm4all-prometheus-exporters (0.11) unstable; urgency=low
 
   * openbgpd-exporter: terminate data received from the pipe
 
- --   
+ -- Max Kellermann <mk@cm4all.com>  Sun, 14 Apr 2024 22:15:53 +0200
 
 cm4all-prometheus-exporters (0.10) unstable; urgency=low
 
