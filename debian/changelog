@@ -1,3 +1,9 @@
+cm4all-prometheus-exporters (0.11) unstable; urgency=low
+
+  * 
+
+ --   
+
 cm4all-prometheus-exporters (0.10) unstable; urgency=low
 
   * cgroup-exporter: remove proprietary cgroups from example configuration
