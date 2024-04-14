@@ -65,8 +65,10 @@ SpawnReadString(char *const* argv, char *const* envp, std::size_t max_length)
 		if (nbytes < 0)
 			throw MakeErrno("Failed to read from pipe");
 
-		if (nbytes == 0)
+		if (nbytes == 0) {
+			buffer.SetSize(fill);
 			return buffer;
+		}
 
 		fill += static_cast<std::size_t>(nbytes);
 		if (fill > max_length)
