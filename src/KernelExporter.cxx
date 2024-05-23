@@ -34,6 +34,37 @@ ParseNS(std::string_view text) noexcept
 	return ParseUint64(text) * 1e-9;
 }
 
+/**
+ * Contents of the file "/sys/kernel/debug/ceph/X/mds_sessions".
+ */
+struct MdsSessions {
+	/**
+	 * The "name" mount option.
+	 */
+	std::string name;
+};
+
+/**
+ * Load the contents of the file
+ * "/sys/kernel/debug/ceph/X/mds_sessions".
+ *
+ * Throws on error.
+ *
+ * @parm file the "mds_sessions" file descriptor
+ */
+static MdsSessions
+LoadMdsSessions(auto &&file)
+{
+	MdsSessions result;
+
+	for (std::string_view line : IterableSmallTextFile<1024>(std::move(file))) {
+		if (SkipPrefix(line, "name \""sv))
+			result.name = Split(line, '"').first;
+	}
+
+	return result;
+}
+
 static void
 ExportLoadAverage(BufferedOutputStream &os, std::string_view s)
 {
@@ -484,7 +515,8 @@ ExportPressure(BufferedOutputStream &os)
 }
 
 static void
-ExportCephSize(BufferedOutputStream &os, std::string_view fsid, std::string_view contents)
+ExportCephSize(BufferedOutputStream &os, std::string_view fsid, std::string_view name,
+	       std::string_view contents)
 {
 	// remove the header and the separator
 	contents = Split(Split(contents, '\n').second, '\n').second;
@@ -508,12 +540,12 @@ ExportCephSize(BufferedOutputStream &os, std::string_view fsid, std::string_view
 		const auto total_sz = StripLeft(rest);
 
 		if (!total_sz.empty())
-			os.Fmt("ceph_metrics_size_bytes{{fsid={:?},item={:?}}} {}\n",
-			       fsid, item, total_sz);
+			os.Fmt("ceph_metrics_size_bytes{{fsid={:?},name={:?},item={:?}}} {}\n",
+			       fsid, name, item, total_sz);
 
 		if (!total.empty())
-			os.Fmt("ceph_metrics_size_count{{fsid={:?},item={:?}}} {}\n",
-			       fsid, item, total);
+			os.Fmt("ceph_metrics_size_count{{fsid={:?},name={:?},item={:?}}} {}\n",
+			       fsid, name, item, total);
 	}
 }
 
@@ -522,7 +554,8 @@ ExportCephSize(BufferedOutputStream &os, std::string_view fsid, std::string_view
  * in CM4all kernels).
  */
 static void
-ExportCephCounters(BufferedOutputStream &os, std::string_view fsid, std::string_view contents)
+ExportCephCounters(BufferedOutputStream &os, std::string_view fsid, std::string_view name,
+		   std::string_view contents)
 {
 	// remove the header
 	contents = Split(contents, '\n').second;
@@ -534,18 +567,18 @@ ExportCephCounters(BufferedOutputStream &os, std::string_view fsid, std::string_
 
 		const auto [count, rest1] = Split(values, ' ');
 		if (!count.empty())
-			os.Fmt("ceph_metrics_count{{fsid={:?},item={:?}}} {}\n",
-			       fsid, item, count);
+			os.Fmt("ceph_metrics_count{{fsid={:?},name={:?},item={:?}}} {}\n",
+			       fsid, name, item, count);
 
 		const auto [size_bytes, rest2] = Split(rest1, ' ');
 		if (!size_bytes.empty())
-			os.Fmt("ceph_metrics_size{{fsid={:?},item={:?}}} {}\n",
-			       fsid, item, size_bytes);
+			os.Fmt("ceph_metrics_size{{fsid={:?},name={:?},item={:?}}} {}\n",
+			       fsid, name, item, size_bytes);
 
 		const auto [wait_ns, rest3] = Split(rest2, ' ');
 		if (!wait_ns.empty())
-			os.Fmt("ceph_metrics_wait{{fsid={:?},item={:?}}} {:e}\n",
-			       fsid, item, ParseNS(wait_ns));
+			os.Fmt("ceph_metrics_wait{{fsid={:?},name={:?},item={:?}}} {:e}\n",
+			       fsid, name, item, ParseNS(wait_ns));
 	}
 }
 
@@ -579,18 +612,26 @@ ExportCeph(BufferedOutputStream &os)
 		if (!subdir.Open(dr.GetFileDescriptor(), name, O_DIRECTORY|O_PATH))
 			continue;
 
+		MdsSessions mds_sessions;
+
+		try {
+			mds_sessions = LoadMdsSessions(FileAt{subdir, "mds_sessions"});
+		} catch (...) {
+			PrintException(std::current_exception());
+		}
+
 		UniqueFileDescriptor f;
 		if (f.OpenReadOnly(subdir, "metrics/size")) {
-			WithSmallTextFile<4096>(f, [&os, fsid](std::string_view contents){
-				ExportCephSize(os, fsid, contents);
+			WithSmallTextFile<4096>(f, [&os, fsid, &mds_sessions](std::string_view contents){
+				ExportCephSize(os, fsid, mds_sessions.name, contents);
 			});
 
 			f.Close();
 		}
 
 		if (f.OpenReadOnly(subdir, "metrics/counters")) {
-			WithSmallTextFile<4096>(f, [&os, fsid](std::string_view contents){
-				ExportCephCounters(os, fsid, contents);
+			WithSmallTextFile<4096>(f, [&os, fsid, &mds_sessions](std::string_view contents){
+				ExportCephCounters(os, fsid, mds_sessions.name, contents);
 			});
 
 			f.Close();
