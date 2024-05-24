@@ -97,7 +97,7 @@ ExportMemInfo(BufferedOutputStream &os, std::string_view s)
 		const uint64_t nbytes = ParseUint64(value) * unit;
 
 		/* obsolete (proprietary) output format */
-		os.Fmt("meminfo{{name=\"{}\"}} {}\n", name, nbytes);
+		os.Fmt("meminfo{{name={:?}}} {}\n", name, nbytes);
 
 		/* same output format as node_exporter */
 		os.Fmt(R"(# HELP node_memory_{}_bytes Memory information field {}_bytes.
@@ -154,7 +154,7 @@ ExportStat(BufferedOutputStream &os, std::string_view s)
 
 				const double seconds = ParseUserHz(value);
 
-				os.Fmt("node_cpu_seconds_total{{cpu=\"{}\",mode=\"{}\"}} {:e}\n",
+				os.Fmt("node_cpu_seconds_total{{cpu={:?},mode={:?}}} {:e}\n",
 				       name, mode, seconds);
 			}
 		} else if (name == "intr"sv) {
@@ -193,7 +193,7 @@ ExportVmStat(BufferedOutputStream &os, std::string_view s)
 		const uint64_t v = ParseUint64(value);
 
 		/* obsolete (proprietary) output format */
-		os.Fmt("vmstat{{name=\"{}\"}} {}\n", name, v);
+		os.Fmt("vmstat{{name={:?}}} {}\n", name, v);
 
 		/* same output format as node_exporter */
 		os.Fmt(R"(# HELP node_vmstat_{} /proc/vmstat information field {}.
@@ -253,7 +253,7 @@ ExportProcNetDev(BufferedOutputStream &os, std::string_view s)
 )",
 				       name, name, name);
 
-			os.Fmt("node_network_{}_total{{device=\"{}\"}} {}\n", name, device, value);
+			os.Fmt("node_network_{}_total{{device={:?}}} {}\n", name, device, value);
 		}
 
 		first = false;
@@ -422,7 +422,7 @@ ExportProcDiskstats(BufferedOutputStream &os, std::string_view s)
 )",
 					  c.name, c.help, c.name, c.type);
 
-			os.Fmt("node_disk_{}{{device=\"{}\"}} {:e}\n",
+			os.Fmt("node_disk_{}{{device={:?}}} {:e}\n",
 			       c.name, device,
 			       value * c.factor);
 		}
@@ -508,11 +508,11 @@ ExportCephSize(BufferedOutputStream &os, std::string_view fsid, std::string_view
 		const auto total_sz = StripLeft(rest);
 
 		if (!total_sz.empty())
-			os.Fmt("ceph_metrics_size_bytes{{fsid=\"{}\",item=\"{}\"}} {}\n",
+			os.Fmt("ceph_metrics_size_bytes{{fsid={:?},item={:?}}} {}\n",
 			       fsid, item, total_sz);
 
 		if (!total.empty())
-			os.Fmt("ceph_metrics_size_count{{fsid=\"{}\",item=\"{}\"}} {}\n",
+			os.Fmt("ceph_metrics_size_count{{fsid={:?},item={:?}}} {}\n",
 			       fsid, item, total);
 	}
 }
@@ -534,17 +534,17 @@ ExportCephCounters(BufferedOutputStream &os, std::string_view fsid, std::string_
 
 		const auto [count, rest1] = Split(values, ' ');
 		if (!count.empty())
-			os.Fmt("ceph_metrics_count{{fsid=\"{}\",item=\"{}\"}} {}\n",
+			os.Fmt("ceph_metrics_count{{fsid={:?},item={:?}}} {}\n",
 			       fsid, item, count);
 
 		const auto [size_bytes, rest2] = Split(rest1, ' ');
 		if (!size_bytes.empty())
-			os.Fmt("ceph_metrics_size{{fsid=\"{}\",item=\"{}\"}} {}\n",
+			os.Fmt("ceph_metrics_size{{fsid={:?},item={:?}}} {}\n",
 			       fsid, item, size_bytes);
 
 		const auto [wait_ns, rest3] = Split(rest2, ' ');
 		if (!wait_ns.empty())
-			os.Fmt("ceph_metrics_wait{{fsid=\"{}\",item=\"{}\"}} {:e}\n",
+			os.Fmt("ceph_metrics_wait{{fsid={:?},item={:?}}} {:e}\n",
 			       fsid, item, ParseNS(wait_ns));
 	}
 }

@@ -326,7 +326,7 @@ WriteCpuacct(BufferedOutputStream &os, const char *group, const char *type,
 	     double value)
 {
 	if (value >= 0)
-		os.Fmt("cgroup_cpu_usage{{groupname=\"{}\",type=\"{}\"}} {:e}\n",
+		os.Fmt("cgroup_cpu_usage{{groupname={:?},type={:?}}} {:e}\n",
 		       group, type, value);
 }
 
@@ -335,7 +335,7 @@ WriteMemory(BufferedOutputStream &os, const char *group, const char *type,
 	    int64_t value)
 {
 	if (value >= 0)
-		os.Fmt("cgroup_memory_usage{{groupname=\"{}\",type=\"{}\"}} {}\n",
+		os.Fmt("cgroup_memory_usage{{groupname={:?},type={:?}}} {}\n",
 		       group, type, value);
 }
 
@@ -343,7 +343,7 @@ static void
 WriteMemory(BufferedOutputStream &os, const char *group, const char *type,
 	    uint64_t value)
 {
-	os.Fmt("cgroup_memory_usage{{groupname=\"{}\",type=\"{}\"}} {}\n",
+	os.Fmt("cgroup_memory_usage{{groupname={:?},type={:?}}} {}\n",
 	       group, type, value);
 }
 
@@ -351,7 +351,7 @@ static void
 WritePids(BufferedOutputStream &os, const char *group, int64_t value)
 {
 	if (value >= 0)
-		os.Fmt("cgroup_pids{{groupname=\"{}\"}} {}\n",
+		os.Fmt("cgroup_pids{{groupname={:?}}} {}\n",
 		       group, value);
 }
 
@@ -361,7 +361,7 @@ WritePressureRatio(BufferedOutputStream &os, const char *group,
 		   const char *window, double value)
 {
 	if (value >= 0)
-		os.Fmt("cgroup_pressure_ratio{{groupname=\"{}\",resource=\"{}\",type=\"{}\",window=\"{}\"}} {:e}\n",
+		os.Fmt("cgroup_pressure_ratio{{groupname={:?},resource={:?},type={:?},window={:?}}} {:e}\n",
 		       group, resource, type, window, value);
 }
 
@@ -390,7 +390,7 @@ WritePressureStallTime(BufferedOutputStream &os, const char *group,
 		       double value)
 {
 	if (value >= 0)
-		os.Fmt("cgroup_pressure_stall_time{{groupname=\"{}\",resource=\"{}\",type=\"{}\"}} {:e}\n",
+		os.Fmt("cgroup_pressure_stall_time{{groupname={:?},resource={:?},type={:?}}} {:e}\n",
 		       group, resource, type, value);
 }
 

@@ -225,8 +225,8 @@ DumpProcessGroups(BufferedOutputStream &os, const ProcessGroupMap &groups)
 )");
 
 	for (const auto &i : groups)
-		os.Fmt("namedprocess_namegroup_context_switches_total{{groupname=\"{}\",ctxswitchtype=\"nonvoluntary\"}} {}\n"
-		       "namedprocess_namegroup_context_switches_total{{groupname=\"{}\",ctxswitchtype=\"voluntary\"}} {}\n",
+		os.Fmt("namedprocess_namegroup_context_switches_total{{groupname={:?},ctxswitchtype=\"nonvoluntary\"}} {}\n"
+		       "namedprocess_namegroup_context_switches_total{{groupname={:?},ctxswitchtype=\"voluntary\"}} {}\n",
 		       i.first, i.second.nonvoluntary_ctxt_switches,
 		       i.first, i.second.voluntary_ctxt_switches);
 
@@ -237,8 +237,8 @@ DumpProcessGroups(BufferedOutputStream &os, const ProcessGroupMap &groups)
 	const double clock_ticks_to_s = double(1) / sysconf(_SC_CLK_TCK);
 
 	for (const auto &i : groups)
-		os.Fmt("namedprocess_namegroup_cpu_seconds_total{{groupname=\"{}\",mode=\"system\"}} {:e}\n"
-		       "namedprocess_namegroup_cpu_seconds_total{{groupname=\"{}\",mode=\"user\"}} {:e}\n",
+		os.Fmt("namedprocess_namegroup_cpu_seconds_total{{groupname={:?},mode=\"system\"}} {:e}\n"
+		       "namedprocess_namegroup_cpu_seconds_total{{groupname={:?},mode=\"user\"}} {:e}\n",
 		       i.first, i.second.stime * clock_ticks_to_s,
 		       i.first, i.second.utime * clock_ticks_to_s);
 
@@ -249,8 +249,8 @@ DumpProcessGroups(BufferedOutputStream &os, const ProcessGroupMap &groups)
 	const size_t page_size = sysconf(_SC_PAGESIZE);
 
 	for (const auto &i : groups)
-		os.Fmt("namedprocess_namegroup_memory_bytes{{groupname=\"{}\",memtype=\"resident\"}} {}\n"
-		       "namedprocess_namegroup_memory_bytes{{groupname=\"{}\",memtype=\"virtual\"}} {}\n",
+		os.Fmt("namedprocess_namegroup_memory_bytes{{groupname={:?},memtype=\"resident\"}} {}\n"
+		       "namedprocess_namegroup_memory_bytes{{groupname={:?},memtype=\"virtual\"}} {}\n",
 		       i.first, i.second.vsize,
 		       i.first, i.second.rss * page_size);
 
@@ -259,7 +259,7 @@ DumpProcessGroups(BufferedOutputStream &os, const ProcessGroupMap &groups)
 )");
 
 	for (const auto &i : groups)
-		os.Fmt("namedprocess_namegroup_minor_page_faults_total{{groupname=\"{}\"}} %lu\n",
+		os.Fmt("namedprocess_namegroup_minor_page_faults_total{{groupname={:?}}} %lu\n",
 		       i.first, i.second.minflt);
 
 	os.Write(R"(# HELP namedprocess_namegroup_num_procs number of processes in this group
@@ -267,7 +267,7 @@ DumpProcessGroups(BufferedOutputStream &os, const ProcessGroupMap &groups)
 )");
 
 	for (const auto &i : groups)
-		os.Fmt("namedprocess_namegroup_num_procs{{groupname=\"{}\"}} {}\n",
+		os.Fmt("namedprocess_namegroup_num_procs{{groupname={:?}}} {}\n",
 		       i.first, i.second.n_procs);
 
 	os.Write(R"(# HELP namedprocess_namegroup_num_threads Number of threads
@@ -275,7 +275,7 @@ DumpProcessGroups(BufferedOutputStream &os, const ProcessGroupMap &groups)
 )");
 
 	for (const auto &i : groups)
-		os.Fmt("namedprocess_namegroup_num_threads{{groupname=\"{}\"}} {}\n",
+		os.Fmt("namedprocess_namegroup_num_threads{{groupname={:?}}} {}\n",
 		       i.first, i.second.n_threads);
 }
 
