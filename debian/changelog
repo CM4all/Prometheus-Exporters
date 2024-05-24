@@ -3,7 +3,7 @@ cm4all-prometheus-exporters (0.12) unstable; urgency=low
   * fix build failure with Linux 6.8 uapi headers
   * kernel-exporter: show filesystem name in ceph metrics
 
- --   
+ -- Max Kellermann <mk@cm4all.com>  Fri, 24 May 2024 09:00:16 +0200
 
 cm4all-prometheus-exporters (0.11) unstable; urgency=low
 
