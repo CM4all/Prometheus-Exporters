@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - id: checkout
         uses: actions/checkout@v4
@@ -32,8 +32,10 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             meson \
             ccache \
+            nlohmann-json3-dev \
             zlib1g-dev \
             libcurl4-openssl-dev \
+            libfmt-dev \
             libyaml-cpp-dev \
             libpcre2-dev \
             libsystemd-dev
@@ -44,7 +46,6 @@ jobs:
       - name: Configure
         run: |
           meson setup \
-            --force-fallback-for=fmt,nlohmann_json \
             -Dwrap_mode=nofallback \
             output
 
