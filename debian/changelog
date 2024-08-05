@@ -3,7 +3,7 @@ cm4all-prometheus-exporters (0.13) unstable; urgency=low
   * kernel-exporter: show /sys/kernel/{oops,warn}_count
   * kernel-exporter: show /sys/kernel/debug/ceph/*/metrics/caps
 
- --   
+ -- Max Kellermann <mk@cm4all.com>  Mon, 05 Aug 2024 14:49:23 +0200
 
 cm4all-prometheus-exporters (0.12) unstable; urgency=low
 
