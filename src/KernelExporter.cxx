@@ -572,15 +572,15 @@ ExportCephCaps(BufferedOutputStream &os, std::string_view fsid, std::string_view
 		const auto [hit, rest3] = Split(StripLeft(rest2), ' ');
 
 		if (!total.empty())
-			os.Fmt("ceph_caps_total{{fsid={:?},name={:?},item={:?}}} {}\n",
+			os.Fmt("ceph_metrics_caps_total{{fsid={:?},name={:?},item={:?}}} {}\n",
 			       fsid, name, item, total);
 
 		if (!miss.empty())
-			os.Fmt("ceph_caps_miss{{fsid={:?},name={:?},item={:?}}} {}\n",
+			os.Fmt("ceph_metrics_caps_miss{{fsid={:?},name={:?},item={:?}}} {}\n",
 			       fsid, name, item, miss);
 
 		if (!hit.empty())
-			os.Fmt("ceph_caps_hit{{fsid={:?},name={:?},item={:?}}} {}\n",
+			os.Fmt("ceph_metrics_caps_hit{{fsid={:?},name={:?},item={:?}}} {}\n",
 			       fsid, name, item, hit);
 	}
 }
