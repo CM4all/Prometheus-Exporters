@@ -66,6 +66,28 @@ LoadMdsSessions(auto &&file)
 }
 
 static void
+ExportOopsWarnCounters(BufferedOutputStream &os)
+{
+	os.Write(R"(# HELP oops_count Number of kernel "oops"
+# TYPE oops_count counter
+# HELP warn_count Number of kernel warnings
+# TYPE warn_count counter
+)");
+
+	if (UniqueFileDescriptor f; f.OpenReadOnly("/sys/kernel/oops_count")) {
+		WithSmallTextFile<64>(f, [&os](std::string_view contents){
+			os.Fmt("oops_count {}\n", Strip(contents));
+		});
+	}
+
+	if (UniqueFileDescriptor f; f.OpenReadOnly("/sys/kernel/warn_count")) {
+		WithSmallTextFile<64>(f, [&os](std::string_view contents){
+			os.Fmt("warn_count {}\n", Strip(contents));
+		});
+	}
+}
+
+static void
 ExportLoadAverage(BufferedOutputStream &os, std::string_view s)
 {
 	os.Write(R"(# HELP loadavg Load average.
@@ -692,6 +714,7 @@ ExportCeph(BufferedOutputStream &os)
 static void
 ExportKernel(BufferedOutputStream &os)
 {
+	ExportOopsWarnCounters(os);
 	Export<256>(os, "/proc/loadavg", ExportLoadAverage);
 	Export<8192>(os, "/proc/meminfo", ExportMemInfo);
 	Export<32768>(os, "/proc/stat", ExportStat);
