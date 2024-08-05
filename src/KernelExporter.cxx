@@ -626,6 +626,12 @@ ExportCeph(BufferedOutputStream &os)
 # TYPE ceph_metrics_size_bytes counter
 # HELP ceph_metrics_size_count Number of operations to/from a Ceph server
 # TYPE ceph_metrics_size_count counter
+# HELP ceph_metrics_caps_total Number of leases
+# TYPE ceph_metrics_caps_total gauge
+# HELP ceph_metrics_caps_miss Number of lease misses
+# TYPE ceph_metrics_caps_miss counter
+# HELP ceph_metrics_caps_hit Number of lease hits
+# TYPE ceph_metrics_caps_hit counter
 # HELP ceph_metrics_count Total number of operations on this Ceph mount
 # TYPE ceph_metrics_count counter
 # HELP ceph_metrics_size Total number of bytes on this Ceph mount
