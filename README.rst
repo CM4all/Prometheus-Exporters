@@ -1,7 +1,7 @@
 Prometheus Exporters
 ====================
 
-A collection of Prometheus Exporters written in efficient C++.
+A collection of Prometheus Exporters for Linux written in efficient C++.
 
 
 Building
