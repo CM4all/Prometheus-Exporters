@@ -550,6 +550,42 @@ ExportCephSize(BufferedOutputStream &os, std::string_view fsid, std::string_view
 }
 
 /**
+ * Export /sys/kernel/debug/ceph/.../metrics/caps
+ */
+static void
+ExportCephCaps(BufferedOutputStream &os, std::string_view fsid, std::string_view name,
+		   std::string_view contents)
+{
+	// skip the header labels
+	contents = Split(contents, '\n').second;
+
+	// skip the separator line
+	contents = Split(contents, '\n').second;
+
+	for (const auto line : IterableSplitString(contents, '\n')) {
+		auto [item, values] = Split(line, ' ');
+		if (item.empty())
+			continue;
+
+		const auto [total, rest1] = Split(StripLeft(values), ' ');
+		const auto [miss, rest2] = Split(StripLeft(rest1), ' ');
+		const auto [hit, rest3] = Split(StripLeft(rest2), ' ');
+
+		if (!total.empty())
+			os.Fmt("ceph_caps_total{{fsid={:?},name={:?},item={:?}}} {}\n",
+			       fsid, name, item, total);
+
+		if (!miss.empty())
+			os.Fmt("ceph_caps_miss{{fsid={:?},name={:?},item={:?}}} {}\n",
+			       fsid, name, item, miss);
+
+		if (!hit.empty())
+			os.Fmt("ceph_caps_hit{{fsid={:?},name={:?},item={:?}}} {}\n",
+			       fsid, name, item, hit);
+	}
+}
+
+/**
  * Export /sys/kernel/debug/ceph/.../metrics/counters (only available
  * in CM4all kernels).
  */
@@ -624,6 +660,14 @@ ExportCeph(BufferedOutputStream &os)
 		if (f.OpenReadOnly(subdir, "metrics/size")) {
 			WithSmallTextFile<4096>(f, [&os, fsid, &mds_sessions](std::string_view contents){
 				ExportCephSize(os, fsid, mds_sessions.name, contents);
+			});
+
+			f.Close();
+		}
+
+		if (f.OpenReadOnly(subdir, "metrics/caps")) {
+			WithSmallTextFile<4096>(f, [&os, fsid, &mds_sessions](std::string_view contents){
+				ExportCephCaps(os, fsid, mds_sessions.name, contents);
 			});
 
 			f.Close();
