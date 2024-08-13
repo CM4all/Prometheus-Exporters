@@ -2,7 +2,7 @@ cm4all-prometheus-exporters (0.14) unstable; urgency=low
 
   * kernel-exporter: show /proc/net/netstat
 
- --   
+ -- Max Kellermann <mk@cm4all.com>  Tue, 13 Aug 2024 16:36:15 +0200
 
 cm4all-prometheus-exporters (0.13) unstable; urgency=low
 
