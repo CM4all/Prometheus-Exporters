@@ -721,6 +721,7 @@ ExportKernel(BufferedOutputStream &os)
 	Export<16384>(os, "/proc/vmstat", ExportVmStat);
 	Export<16384>(os, "/proc/net/dev", ExportProcNetDev);
 	Export<8192>(os, "/proc/net/snmp", ExportProcNetSnmp);
+	Export<8192>(os, "/proc/net/netstat", ExportProcNetSnmp);
 	Export<16384>(os, "/proc/diskstats", ExportProcDiskstats);
 	ExportPressure(os);
 	ExportCeph(os);
