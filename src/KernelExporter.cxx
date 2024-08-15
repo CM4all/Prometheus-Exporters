@@ -11,6 +11,7 @@
 #include "io/DirectoryReader.hxx"
 #include "io/SmallTextFile.hxx"
 #include "util/IterableSplitString.hxx"
+#include "util/NumberParser.hxx"
 #include "util/PrintException.hxx"
 #include "util/StringCompare.hxx"
 #include "util/StringSplit.hxx"
@@ -536,6 +537,62 @@ ExportPressure(BufferedOutputStream &os)
 		       "Total time in seconds no process could make progress due to memory congestion");
 }
 
+static auto
+NextHex(std::string_view &line) noexcept
+{
+	auto [value, rest] = Split(StripLeft(line), ' ');
+	line = rest;
+	return ParseInteger<uint_least64_t>(value, 16);
+}
+
+static void
+ExportIpVs(BufferedOutputStream &os)
+{
+	UniqueFileDescriptor f;
+	if (!f.OpenReadOnly("/proc/net/ip_vs_stats"))
+		return;
+
+	os.Write(R"(
+# HELP ip_vs_connections Number of IP_VS connections that were created
+# TYPE ip_vs_connections counter
+# HELP ip_incoming_vs_packets Number of incoming IP_VS packets
+# TYPE ip_incoming_vs_packets counter
+# HELP ip_outgoing_vs_packets Number of output IP_VS packets
+# TYPE ip_outgoing_vs_packets counter
+# HELP ip_incoming_vs_bytes Number of incoming IP_VS bytes
+# TYPE ip_incoming_vs_bytes counter
+# HELP ip_outgoing_vs_bytes Number of outgoing IP_VS bytes
+# TYPE ip_outgoing_vs_bytes counter
+)");
+
+	WithSmallTextFile<1024>(f, [&os](std::string_view contents){
+		 auto [header1, rest1] = Split(contents, '\n');
+		auto [header2, rest2] = Split(rest1, '\n');
+		auto [line, rest3] = Split(rest2, '\n');
+
+		const auto total_conns = NextHex(line);
+		const auto incoming_packets = NextHex(line);
+		const auto outgoing_packets = NextHex(line);
+		const auto incoming_bytes = NextHex(line);
+		const auto outgoing_bytes = NextHex(line);
+
+		if (total_conns && incoming_packets && outgoing_packets && incoming_bytes && outgoing_bytes) {
+			os.Fmt(R"(
+ip_vs_connections {}
+ip_vs_incoming_packets {}
+ip_vs_outgoing_packets {}
+ip_vs_incoming_bytes {}
+ip_vs_outgoing_bytes {}
+)",
+			       *total_conns,
+			       *incoming_packets,
+			       *outgoing_packets,
+			       *incoming_bytes,
+			       *outgoing_bytes);
+		}
+	});
+}
+
 static void
 ExportCephSize(BufferedOutputStream &os, std::string_view fsid, std::string_view name,
 	       std::string_view contents)
@@ -724,6 +781,7 @@ ExportKernel(BufferedOutputStream &os)
 	Export<8192>(os, "/proc/net/netstat", ExportProcNetSnmp);
 	Export<16384>(os, "/proc/diskstats", ExportProcDiskstats);
 	ExportPressure(os);
+	ExportIpVs(os);
 	ExportCeph(os);
 }
 
