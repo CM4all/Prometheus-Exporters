@@ -555,14 +555,14 @@ ExportIpVs(BufferedOutputStream &os)
 	os.Write(R"(
 # HELP ip_vs_connections Number of IP_VS connections that were created
 # TYPE ip_vs_connections counter
-# HELP ip_incoming_vs_packets Number of incoming IP_VS packets
-# TYPE ip_incoming_vs_packets counter
-# HELP ip_outgoing_vs_packets Number of output IP_VS packets
-# TYPE ip_outgoing_vs_packets counter
-# HELP ip_incoming_vs_bytes Number of incoming IP_VS bytes
-# TYPE ip_incoming_vs_bytes counter
-# HELP ip_outgoing_vs_bytes Number of outgoing IP_VS bytes
-# TYPE ip_outgoing_vs_bytes counter
+# HELP ip_vs_incoming_packets Number of incoming IP_VS packets
+# TYPE ip_vs_incoming_packets counter
+# HELP ip_vs_outgoing_packets Number of output IP_VS packets
+# TYPE ip_vs_outgoing_packets counter
+# HELP ip_vs_incoming_bytes Number of incoming IP_VS bytes
+# TYPE ip_vs_incoming_bytes counter
+# HELP ip_vs_outgoing_bytes Number of outgoing IP_VS bytes
+# TYPE ip_vs_outgoing_bytes counter
 )");
 
 	WithSmallTextFile<1024>(f, [&os](std::string_view contents){
