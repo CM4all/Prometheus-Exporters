@@ -3,7 +3,7 @@ cm4all-prometheus-exporters (0.15) unstable; urgency=low
   * kernel-exporter: show /proc/net/ip_vs_stats
   * ping-exporter: new exporter
 
- --   
+ -- Max Kellermann <mk@cm4all.com>  Mon, 19 Aug 2024 23:24:42 +0200
 
 cm4all-prometheus-exporters (0.14) unstable; urgency=low
 
