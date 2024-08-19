@@ -110,6 +110,10 @@ subdir('libcommon/src/lib/nlohmann_json')
 subdir('libcommon/src/io')
 subdir('libcommon/src/lib/curl')
 subdir('libcommon/src/lib/zlib')
+subdir('libcommon/src/system')
+subdir('libcommon/src/net')
+subdir('libcommon/src/event')
+subdir('libcommon/src/event/net')
 
 frontend = static_library(
   'frontend',
@@ -129,6 +133,23 @@ frontend_dep = declare_dependency(
   dependencies: [
     libsystemd,
     zlib_dep,
+  ],
+)
+
+efrontend = static_library(
+  'efrontend',
+  'src/EFrontend.cxx',
+  include_directories: inc,
+  dependencies: [
+    event_net_dep,
+    libsystemd,
+  ],
+)
+
+efrontend_dep = declare_dependency(
+  link_with: efrontend,
+  dependencies: [
+    event_net_dep,
   ],
 )
 
@@ -180,6 +201,20 @@ executable(
   dependencies: [
     libyamlcpp,
     frontend_dep,
+  ],
+  install: true,
+  install_dir: 'sbin',
+)
+
+executable(
+  'cm4all-ping-exporter',
+  'src/PingExporter.cxx',
+  'src/PingConfig.cxx',
+  include_directories: inc,
+  dependencies: [
+    libyamlcpp,
+    fmt_dep,
+    efrontend_dep,
   ],
   install: true,
   install_dir: 'sbin',

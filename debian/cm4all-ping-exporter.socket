@@ -1,0 +1,7 @@
+[Unit]
+
+[Socket]
+ListenStream=/run/cm4all/prometheus-exporters/ping.socket
+
+[Install]
+WantedBy=sockets.target
