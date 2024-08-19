@@ -1,3 +1,4 @@
 sources:
   - "/run/cm4all/prometheus-exporters/cgroup.socket"
+  - "/run/cm4all/prometheus-exporters/kernel.socket"
   - "/run/cm4all/prometheus-exporters/process.socket"
