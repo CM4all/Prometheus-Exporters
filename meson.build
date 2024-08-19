@@ -117,6 +117,7 @@ frontend = static_library(
   'src/Syntax.cxx',
   include_directories: inc,
   dependencies: [
+    libsystemd,
     io_dep,
     zlib_dep,
     http_dep,
@@ -126,6 +127,7 @@ frontend = static_library(
 frontend_dep = declare_dependency(
   link_with: frontend,
   dependencies: [
+    libsystemd,
     zlib_dep,
   ],
 )
@@ -137,7 +139,6 @@ if pcre_dep.found()
     'src/ProcessConfig.cxx',
     include_directories: inc,
     dependencies: [
-      libsystemd,
       libyamlcpp,
       pcre_dep,
       frontend_dep,
@@ -152,7 +153,6 @@ executable(
   'src/FsExporter.cxx',
   include_directories: inc,
   dependencies: [
-    libsystemd,
     frontend_dep,
   ],
   install: true,
@@ -165,7 +165,6 @@ executable(
   'src/Pressure.cxx',
   include_directories: inc,
   dependencies: [
-    libsystemd,
     frontend_dep,
   ],
   install: true,
@@ -179,7 +178,6 @@ executable(
   'src/Pressure.cxx',
   include_directories: inc,
   dependencies: [
-    libsystemd,
     libyamlcpp,
     frontend_dep,
   ],
@@ -193,7 +191,6 @@ executable(
   include_directories: inc,
   dependencies: [
     nlohmann_json_dep,
-    libsystemd,
     frontend_dep,
   ],
   install: true,
@@ -207,7 +204,6 @@ if curl_dep.found()
     'src/MultiConfig.cxx',
     include_directories: inc,
     dependencies: [
-      libsystemd,
       libyamlcpp,
       curl_dep,
       frontend_dep,
