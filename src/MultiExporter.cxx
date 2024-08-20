@@ -114,7 +114,7 @@ ExportMulti(const MultiExporterConfig &config, BufferedOutputStream &os)
 	}
 
 	while (multi.Perform())
-		multi.Wait();
+		multi.Wait(std::chrono::seconds{10});
 
 	while (auto msg = multi.InfoRead()) {
 		if (msg->msg == CURLMSG_DONE) {
