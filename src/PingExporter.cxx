@@ -7,6 +7,7 @@
 #include "event/net/PingClient.hxx"
 #include "event/net/PrometheusExporterHandler.hxx"
 #include "event/Loop.hxx"
+#include "event/CoarseTimerEvent.hxx"
 #include "time/Cast.hxx"
 #include "util/PrintException.hxx"
 
@@ -83,11 +84,6 @@ private:
 		ping_client.reset();
 		++stats.n_replies;
 		stats.wait += GetEventLoop().SteadyNow() - start_time;
-	}
-
-	void PingTimeout() noexcept override {
-		ping_client.reset();
-		++stats.n_timeouts;
 	}
 
 	void PingError([[maybe_unused]] std::exception_ptr error) noexcept override {
