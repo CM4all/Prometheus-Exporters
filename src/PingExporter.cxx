@@ -25,7 +25,7 @@ struct PingTargetStats {
 };
 
 class PingTarget final : PingClientHandler {
-	static constexpr Event::Duration interval = std::chrono::seconds{10};
+	static constexpr Event::Duration interval = std::chrono::seconds{5};
 
 	CoarseTimerEvent timer;
 
