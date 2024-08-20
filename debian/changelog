@@ -4,6 +4,7 @@ cm4all-prometheus-exporters (0.16) unstable; urgency=low
   * ping-exporter: wait for HTTP request to arrive
   * ping-exporter: reduce interval to 5 seconds
   * ping-exporter: verify the checksum of received packets
+  * ping-exporter: reuse the ICMP socket
 
  --   
 

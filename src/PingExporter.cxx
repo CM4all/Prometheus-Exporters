@@ -32,7 +32,7 @@ class PingTarget final : PingClientHandler {
 
 	Event::TimePoint start_time;
 
-	std::optional<PingClient> ping_client;
+	PingClient ping_client;
 
 	PingTargetStats stats{};
 
@@ -43,6 +43,7 @@ class PingTarget final : PingClientHandler {
 public:
 	explicit PingTarget(EventLoop &event_loop, const IPv4Address &_address) noexcept
 		:timer(event_loop, BIND_THIS_METHOD(OnTimer)),
+		 ping_client(event_loop, *this),
 		 address(_address)
 	{
 		inet_ntop(AF_INET, &address.GetAddress(), name, sizeof(name));
@@ -64,9 +65,8 @@ public:
 
 private:
 	void OnTimer() noexcept {
-		if (ping_client) {
+		if (ping_client.IsPending()) {
 			++stats.n_timeouts;
-			ping_client.reset();
 		}
 
 		timer.Schedule(interval);
@@ -74,20 +74,16 @@ private:
 		++stats.n_requests;
 		start_time = GetEventLoop().SteadyNow();
 
-		PingClientHandler &handler = *this;
-		ping_client.emplace(GetEventLoop(), handler);
-		ping_client->Start(address);
+		ping_client.Start(address);
 	}
 
 	// virtual methods from class PingClientHandler
 	void PingResponse() noexcept override {
-		ping_client.reset();
 		++stats.n_replies;
 		stats.wait += GetEventLoop().SteadyNow() - start_time;
 	}
 
 	void PingError([[maybe_unused]] std::exception_ptr error) noexcept override {
-		ping_client.reset();
 		++stats.n_errors;
 	}
 };
