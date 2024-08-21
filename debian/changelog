@@ -6,7 +6,7 @@ cm4all-prometheus-exporters (0.16) unstable; urgency=low
   * ping-exporter: verify the checksum of received packets
   * ping-exporter: reuse the ICMP socket
 
- --   
+ -- Max Kellermann <mk@cm4all.com>  Wed, 21 Aug 2024 14:32:13 +0200
 
 cm4all-prometheus-exporters (0.15) unstable; urgency=low
 
