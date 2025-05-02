@@ -5,7 +5,7 @@ cm4all-prometheus-exporters (0.17) unstable; urgency=low
   * kernel-exporter: show /proc/sys/kernel/hung_task_detect_count
   * cgroup-exporter: show "pids.forks"
 
- --   
+ -- Max Kellermann <mk@cm4all.com>  Fri, 02 May 2025 15:30:50 +0200
 
 cm4all-prometheus-exporters (0.16) unstable; urgency=low
 
