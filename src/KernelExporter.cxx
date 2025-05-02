@@ -75,16 +75,16 @@ ExportOopsWarnCounters(BufferedOutputStream &os)
 # TYPE warn_count counter
 )");
 
-	if (UniqueFileDescriptor f; f.OpenReadOnly("/sys/kernel/oops_count")) {
-		WithSmallTextFile<64>(f, [&os](std::string_view contents){
-			os.Fmt("oops_count {}\n", Strip(contents));
-		});
-	}
+	UniqueFileDescriptor sys_kernel;
+	if (!sys_kernel.Open("/sys/kernel", O_DIRECTORY|O_PATH))
+		return;
 
-	if (UniqueFileDescriptor f; f.OpenReadOnly("/sys/kernel/warn_count")) {
-		WithSmallTextFile<64>(f, [&os](std::string_view contents){
-			os.Fmt("warn_count {}\n", Strip(contents));
-		});
+	for (const char *name : {"oops_count", "warn_count"}) {
+		if (UniqueFileDescriptor f; f.OpenReadOnly(sys_kernel, name)) {
+			WithSmallTextFile<64>(f, [&os, name](std::string_view contents){
+				os.Fmt("{} {}\n", name, Strip(contents));
+			});
+		}
 	}
 }
 
