@@ -348,11 +348,11 @@ WriteMemory(BufferedOutputStream &os, std::string_view group, std::string_view t
 }
 
 static void
-WritePids(BufferedOutputStream &os, std::string_view group, int64_t value)
+WritePids(BufferedOutputStream &os, std::string_view group, const CgroupPidsValues &pids)
 {
-	if (value >= 0)
+	if (pids.current >= 0)
 		os.Fmt("cgroup_pids{{groupname={:?}}} {}\n",
-		       group, value);
+		       group, pids.current);
 }
 
 static void
@@ -461,7 +461,7 @@ DumpCgroup(BufferedOutputStream &os, const CgroupsData &data)
 	for (const auto &i : data.groups) {
 		const std::string_view group = i.first;
 		const auto &pids = i.second.pids;
-		WritePids(os, group, pids.current);
+		WritePids(os, group, pids);
 	}
 
 	os.Write(R"(# HELP cgroup_pressure_ratio Pressure stall ratio
