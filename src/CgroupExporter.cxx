@@ -322,7 +322,7 @@ CollectCgroup(const CgroupExporterConfig &config)
 }
 
 static void
-WriteCpuacct(BufferedOutputStream &os, const char *group, const char *type,
+WriteCpuacct(BufferedOutputStream &os, std::string_view group, std::string_view type,
 	     double value)
 {
 	if (value >= 0)
@@ -331,7 +331,7 @@ WriteCpuacct(BufferedOutputStream &os, const char *group, const char *type,
 }
 
 static void
-WriteMemory(BufferedOutputStream &os, const char *group, const char *type,
+WriteMemory(BufferedOutputStream &os, std::string_view group, std::string_view type,
 	    int64_t value)
 {
 	if (value >= 0)
@@ -340,7 +340,7 @@ WriteMemory(BufferedOutputStream &os, const char *group, const char *type,
 }
 
 static void
-WriteMemory(BufferedOutputStream &os, const char *group, const char *type,
+WriteMemory(BufferedOutputStream &os, std::string_view group, std::string_view type,
 	    uint64_t value)
 {
 	os.Fmt("cgroup_memory_usage{{groupname={:?},type={:?}}} {}\n",
@@ -348,7 +348,7 @@ WriteMemory(BufferedOutputStream &os, const char *group, const char *type,
 }
 
 static void
-WritePids(BufferedOutputStream &os, const char *group, int64_t value)
+WritePids(BufferedOutputStream &os, std::string_view group, int64_t value)
 {
 	if (value >= 0)
 		os.Fmt("cgroup_pids{{groupname={:?}}} {}\n",
@@ -356,9 +356,9 @@ WritePids(BufferedOutputStream &os, const char *group, int64_t value)
 }
 
 static void
-WritePressureRatio(BufferedOutputStream &os, const char *group,
-		   const char *resource, const char *type,
-		   const char *window, double value)
+WritePressureRatio(BufferedOutputStream &os, std::string_view group,
+		   std::string_view resource, std::string_view type,
+		   std::string_view window, double value)
 {
 	if (value >= 0)
 		os.Fmt("cgroup_pressure_ratio{{groupname={:?},resource={:?},type={:?},window={:?}}} {:e}\n",
@@ -366,27 +366,27 @@ WritePressureRatio(BufferedOutputStream &os, const char *group,
 }
 
 static void
-WritePressureRatio(BufferedOutputStream &os, const char *group,
-		   const char *resource, const char *type,
+WritePressureRatio(BufferedOutputStream &os, std::string_view group,
+		   std::string_view resource, std::string_view type,
 		   const PressureItemValues &values)
 {
-	WritePressureRatio(os, group, resource, type, "10", values.avg10);
-	WritePressureRatio(os, group, resource, type, "60", values.avg60);
-	WritePressureRatio(os, group, resource, type, "300", values.avg300);
+	WritePressureRatio(os, group, resource, type, "10"sv, values.avg10);
+	WritePressureRatio(os, group, resource, type, "60"sv, values.avg60);
+	WritePressureRatio(os, group, resource, type, "300"sv, values.avg300);
 }
 
 static void
-WritePressureRatio(BufferedOutputStream &os, const char *group,
-		   const char *resource,
+WritePressureRatio(BufferedOutputStream &os, std::string_view group,
+		   std::string_view resource,
 		   const PressureValues &values)
 {
-	WritePressureRatio(os, group, resource, "some", values.some);
-	WritePressureRatio(os, group, resource, "full", values.full);
+	WritePressureRatio(os, group, resource, "some"sv, values.some);
+	WritePressureRatio(os, group, resource, "full"sv, values.full);
 }
 
 static void
-WritePressureStallTime(BufferedOutputStream &os, const char *group,
-		       const char *resource, const char *type,
+WritePressureStallTime(BufferedOutputStream &os, std::string_view group,
+		       std::string_view resource, std::string_view type,
 		       double value)
 {
 	if (value >= 0)
@@ -395,20 +395,20 @@ WritePressureStallTime(BufferedOutputStream &os, const char *group,
 }
 
 static void
-WritePressureStallTime(BufferedOutputStream &os, const char *group,
-		       const char *resource, const char *type,
+WritePressureStallTime(BufferedOutputStream &os, std::string_view group,
+		       std::string_view resource, std::string_view type,
 		       const PressureItemValues &values)
 {
 	WritePressureStallTime(os, group, resource, type, values.stall_time);
 }
 
 static void
-WritePressureStallTime(BufferedOutputStream &os, const char *group,
-		   const char *resource,
-		   const PressureValues &values)
+WritePressureStallTime(BufferedOutputStream &os, std::string_view group,
+		       std::string_view resource,
+		       const PressureValues &values)
 {
-	WritePressureStallTime(os, group, resource, "some", values.some);
-	WritePressureStallTime(os, group, resource, "full", values.full);
+	WritePressureStallTime(os, group, resource, "some"sv, values.some);
+	WritePressureStallTime(os, group, resource, "full"sv, values.full);
 }
 
 static void
@@ -419,11 +419,11 @@ DumpCgroup(BufferedOutputStream &os, const CgroupsData &data)
 )");
 
 	for (const auto &i : data.groups) {
-		const char *group = i.first.c_str();
+		const std::string_view group = i.first;
 		const auto &cpu = i.second.cpuacct;
-		WriteCpuacct(os, group, "user", cpu.user);
-		WriteCpuacct(os, group, "system", cpu.system);
-		WriteCpuacct(os, group, "total", cpu.usage);
+		WriteCpuacct(os, group, "user"sv, cpu.user);
+		WriteCpuacct(os, group, "system"sv, cpu.system);
+		WriteCpuacct(os, group, "total"sv, cpu.usage);
 	}
 
 	os.Write(R"(# HELP cgroup_memory_usage Memory usage in bytes
@@ -431,15 +431,15 @@ DumpCgroup(BufferedOutputStream &os, const CgroupsData &data)
 )");
 
 	for (const auto &i : data.groups) {
-		const char *group = i.first.c_str();
+		const std::string_view group = i.first;
 		const auto &memory = i.second.memory;
-		WriteMemory(os, group, "total", memory.usage);
-		WriteMemory(os, group, "swap", memory.swap_usage);
-		WriteMemory(os, group, "kmem.total", memory.kmem_usage);
-		WriteMemory(os, group, "memsw.total", memory.memsw_usage);
+		WriteMemory(os, group, "total"sv, memory.usage);
+		WriteMemory(os, group, "swap"sv, memory.swap_usage);
+		WriteMemory(os, group, "kmem.total"sv, memory.kmem_usage);
+		WriteMemory(os, group, "memsw.total"sv, memory.memsw_usage);
 
 		for (const auto &m : memory.stat)
-			WriteMemory(os, group, m.first.c_str(), m.second);
+			WriteMemory(os, group, m.first, m.second);
 	}
 
 	os.Write(R"(# HELP cgroup_memory_failures Memory limit failures
@@ -447,11 +447,11 @@ DumpCgroup(BufferedOutputStream &os, const CgroupsData &data)
 )");
 
 	for (const auto &i : data.groups) {
-		const char *group = i.first.c_str();
+		const std::string_view group = i.first;
 		const auto &memory = i.second.memory;
-		WriteMemory(os, group, "memory", memory.failcnt);
-		WriteMemory(os, group, "kmem", memory.kmem_failfnt);
-		WriteMemory(os, group, "memsw", memory.memsw_failcnt);
+		WriteMemory(os, group, "memory"sv, memory.failcnt);
+		WriteMemory(os, group, "kmem"sv, memory.kmem_failfnt);
+		WriteMemory(os, group, "memsw"sv, memory.memsw_failcnt);
 	}
 
 	os.Write(R"(# HELP cgroup_pids Process/Thread count
@@ -459,7 +459,7 @@ DumpCgroup(BufferedOutputStream &os, const CgroupsData &data)
 )");
 
 	for (const auto &i : data.groups) {
-		const char *group = i.first.c_str();
+		const std::string_view group = i.first;
 		const auto &pids = i.second.pids;
 		WritePids(os, group, pids.current);
 	}
@@ -469,10 +469,10 @@ DumpCgroup(BufferedOutputStream &os, const CgroupsData &data)
 )");
 
 	for (const auto &i : data.groups) {
-		const char *group = i.first.c_str();
-		WritePressureRatio(os, group, "cpu", i.second.cpu_pressure);
-		WritePressureRatio(os, group, "io", i.second.io_pressure);
-		WritePressureRatio(os, group, "memory", i.second.memory_pressure);
+		const std::string_view group = i.first;
+		WritePressureRatio(os, group, "cpu"sv, i.second.cpu_pressure);
+		WritePressureRatio(os, group, "io"sv, i.second.io_pressure);
+		WritePressureRatio(os, group, "memory"sv, i.second.memory_pressure);
 	}
 
 	os.Write(R"(# HELP cgroup_pressure_stall_time Pressure stall time
@@ -480,10 +480,10 @@ DumpCgroup(BufferedOutputStream &os, const CgroupsData &data)
 )");
 
 	for (const auto &i : data.groups) {
-		const char *group = i.first.c_str();
-		WritePressureStallTime(os, group, "cpu", i.second.cpu_pressure);
-		WritePressureStallTime(os, group, "io", i.second.io_pressure);
-		WritePressureStallTime(os, group, "memory", i.second.memory_pressure);
+		const std::string_view group = i.first;
+		WritePressureStallTime(os, group, "cpu"sv, i.second.cpu_pressure);
+		WritePressureStallTime(os, group, "io"sv, i.second.io_pressure);
+		WritePressureStallTime(os, group, "memory"sv, i.second.memory_pressure);
 	}
 }
 
