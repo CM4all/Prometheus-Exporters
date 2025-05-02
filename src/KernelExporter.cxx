@@ -77,13 +77,15 @@ ExportOopsWarnCounters(BufferedOutputStream &os)
 # TYPE softlockup_count counter
 # HELP hardlockup_count Number of hard lockups
 # TYPE hardlockup_count counter
+# HELP rcu_stall_count Number of RCU stalls
+# TYPE rcu_stall_count counter
 )");
 
 	UniqueFileDescriptor sys_kernel;
 	if (!sys_kernel.Open("/sys/kernel", O_DIRECTORY|O_PATH))
 		return;
 
-	for (const char *name : {"oops_count", "warn_count", "softlockup_count", "hardlockup_count"}) {
+	for (const char *name : {"oops_count", "warn_count", "softlockup_count", "hardlockup_count", "rcu_stall_count"}) {
 		if (UniqueFileDescriptor f; f.OpenReadOnly(sys_kernel, name)) {
 			WithSmallTextFile<64>(f, [&os, name](std::string_view contents){
 				os.Fmt("{} {}\n", name, Strip(contents));

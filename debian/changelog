@@ -1,6 +1,7 @@
 cm4all-prometheus-exporters (0.17) unstable; urgency=low
 
   * kernel-exporter: show /sys/kernel/{soft,hard}lockup_count
+  * kernel-exporter: show /sys/kernel/rcu_stall_count
 
  --   
 
