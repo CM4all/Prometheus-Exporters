@@ -95,6 +95,20 @@ ExportOopsWarnCounters(BufferedOutputStream &os)
 }
 
 static void
+ExportHungTasks(BufferedOutputStream &os)
+{
+	os.Write(R"(# HELP hung_task_detect_count Total number of tasks that have been detected as hung since the system boot
+# TYPE hung_task_detect_count counter
+)");
+
+	if (UniqueFileDescriptor f; f.OpenReadOnly("/proc/sys/kernel/hung_task_detect_count")) {
+		WithSmallTextFile<64>(f, [&os](std::string_view contents){
+			os.Fmt("hung_task_detect_count {}\n", Strip(contents));
+		});
+	}
+}
+
+static void
 ExportLoadAverage(BufferedOutputStream &os, std::string_view s)
 {
 	os.Write(R"(# HELP loadavg Load average.
@@ -778,6 +792,7 @@ static void
 ExportKernel(BufferedOutputStream &os)
 {
 	ExportOopsWarnCounters(os);
+	ExportHungTasks(os);
 	Export<256>(os, "/proc/loadavg", ExportLoadAverage);
 	Export<8192>(os, "/proc/meminfo", ExportMemInfo);
 	Export<32768>(os, "/proc/stat", ExportStat);
