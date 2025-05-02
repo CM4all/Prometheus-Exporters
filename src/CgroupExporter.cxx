@@ -80,6 +80,7 @@ struct CgroupMemoryValues {
 
 struct CgroupPidsValues {
 	int64_t current = -1;
+	int64_t forks = -1;
 };
 
 struct CgroupValues {
@@ -233,6 +234,8 @@ WalkContext::HandleRegularFile(FileAt file)
 		});
 	} else if (StringIsEqual(base, "pids.current")) {
 		group.pids.current = ReadUint64File(file);
+	} else if (StringIsEqual(base, "pids.forks")) {
+		group.pids.forks = ReadUint64File(file);
 	} else if (StringIsEqual(base, "cpu.pressure")) {
 		group.cpu_pressure = ReadPressureFile(file);
 	} else if (StringIsEqual(base, "io.pressure")) {
@@ -353,6 +356,10 @@ WritePids(BufferedOutputStream &os, std::string_view group, const CgroupPidsValu
 	if (pids.current >= 0)
 		os.Fmt("cgroup_pids{{groupname={:?}}} {}\n",
 		       group, pids.current);
+
+	if (pids.forks >= 0)
+		os.Fmt("cgroup_forks{{groupname={:?}}} {}\n",
+		       group, pids.forks);
 }
 
 static void
