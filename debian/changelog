@@ -1,6 +1,6 @@
 cm4all-prometheus-exporters (0.18) unstable; urgency=low
 
-  * 
+  * require Meson 1.2
 
  --   
 
