@@ -15,7 +15,7 @@ EFrontend::EFrontend(EventLoop &event_loop, PrometheusExporterHandler &handler)
 
 	for (int i = 0; i < n_listeners; ++i)
 		listeners.emplace_front(event_loop,
-					UniqueSocketDescriptor{SD_LISTEN_FDS_START + i},
+					UniqueSocketDescriptor{AdoptTag{}, SD_LISTEN_FDS_START + i},
 					handler);
 }
 
