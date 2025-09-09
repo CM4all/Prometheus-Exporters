@@ -1,10 +1,10 @@
 project('CM4all Prometheus Exporters', ['cpp'], version: '0.18',
   meson_version: '>= 1.2',
   default_options: [
-    'cpp_std=c++2a',
+    'cpp_std=c++23',
     'warning_level=3',
 
-    'fmt:cpp_std=c++2a',
+    'fmt:cpp_std=c++23',
 
     # Not interested in compiler warnings from subprojects.
     'yaml-cpp:werror=false',

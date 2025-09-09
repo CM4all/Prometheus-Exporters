@@ -9,7 +9,7 @@ Building
 
 You need:
 
-- a C++20 compiler (e.g. GCC or clang)
+- a C++23 compiler (e.g. GCC or clang)
 - `meson 1.2 <http://mesonbuild.com/>`__
 - `libfmt <https://fmt.dev/>`__
 - `systemd <https://www.freedesktop.org/wiki/Software/systemd/>`__
