@@ -52,10 +52,10 @@ To build the Debian package, install the build dependencies
 
  dpkg-buildpackage -rfakeroot -b -uc -us
 
-There is an APT repository with pre-built packages for Debian Bookworm
+There is an APT repository with pre-built packages for Debian Trixie
 (amd64 and arm64); add to ``/etc/apt/sources.list``::
 
- deb [trusted=yes] https://deb.cm4all.net/debian/ bookworm-default main
+ deb [trusted=yes] https://deb.cm4all.net/debian/ trixie-default main
 
 (Unfortunately, it is not yet signed, therefore the ``trusted=yes``
 option is needed currently.)
