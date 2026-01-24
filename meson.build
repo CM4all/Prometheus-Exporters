@@ -1,4 +1,4 @@
-project('CM4all Prometheus Exporters', ['cpp'], version: '0.18',
+project('CM4all Prometheus Exporters', ['cpp'], version: '0.19',
   meson_version: '>= 1.2',
   default_options: [
     'cpp_std=c++23',
