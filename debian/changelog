@@ -4,7 +4,7 @@ cm4all-prometheus-exporters (0.18) unstable; urgency=low
   * switch to C++23
   * require Meson 1.2
 
- --   
+ -- Max Kellermann <mk@cm4all.com>  Sat, 24 Jan 2026 12:34:41 +0100
 
 cm4all-prometheus-exporters (0.17) unstable; urgency=low
 
