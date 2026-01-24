@@ -8,9 +8,9 @@
 #include <string>
 
 struct CgroupExporterConfig {
-	std::set<std::string> opaque_paths;
+	std::set<std::string, std::less<>> opaque_paths;
 
-	std::set<std::string> ignore_names;
+	std::set<std::string, std::less<>> ignore_names;
 
 	[[gnu::pure]]
 	bool CheckIgnoreName(const char *name) const noexcept;

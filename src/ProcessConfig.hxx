@@ -16,8 +16,8 @@ struct ProcessInfo;
 struct ProcessNameConfig {
 	std::string name;
 
-	std::set<std::string> comm;
-	std::set<std::string> exe;
+	std::set<std::string, std::less<>> comm;
+	std::set<std::string, std::less<>> exe;
 	std::forward_list<UniqueRegex> cmdline;
 
 	bool Match(const ProcessInfo &info) const noexcept;

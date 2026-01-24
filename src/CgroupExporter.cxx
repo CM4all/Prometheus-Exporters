@@ -75,7 +75,7 @@ struct CgroupMemoryValues {
 	int64_t usage = -1, kmem_usage = -1, memsw_usage = -1;
 	int64_t swap_usage = -1;
 	int64_t failcnt = -1, kmem_failfnt = -1, memsw_failcnt = -1;
-	std::map<std::string, uint64_t> stat;
+	std::map<std::string, uint64_t, std::less<>> stat;
 };
 
 struct CgroupPidsValues {
@@ -91,7 +91,7 @@ struct CgroupValues {
 };
 
 struct CgroupsData {
-	std::map<std::string, CgroupValues> groups;
+	std::map<std::string, CgroupValues, std::less<>> groups;
 };
 
 struct WalkContext {
