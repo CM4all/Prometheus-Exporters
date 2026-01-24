@@ -86,7 +86,7 @@ ExportOopsWarnCounters(BufferedOutputStream &os)
 		return;
 
 	for (const char *name : {"oops_count", "warn_count", "softlockup_count", "hardlockup_count", "rcu_stall_count"}) {
-		if (UniqueFileDescriptor f; f.OpenReadOnly(sys_kernel, name)) {
+		if (UniqueFileDescriptor f; f.OpenReadOnly({sys_kernel, name})) {
 			WithSmallTextFile<64>(f, [&os, name](std::string_view contents){
 				os.Fmt("{} {}\n", name, Strip(contents));
 			});
@@ -750,7 +750,7 @@ ExportCeph(BufferedOutputStream &os)
 			continue;
 
 		UniqueFileDescriptor subdir;
-		if (!subdir.Open(dr.GetFileDescriptor(), name, O_DIRECTORY|O_PATH))
+		if (!subdir.Open({dr.GetFileDescriptor(), name}, O_DIRECTORY|O_PATH))
 			continue;
 
 		MdsSessions mds_sessions;
@@ -762,7 +762,7 @@ ExportCeph(BufferedOutputStream &os)
 		}
 
 		UniqueFileDescriptor f;
-		if (f.OpenReadOnly(subdir, "metrics/size")) {
+		if (f.OpenReadOnly({subdir, "metrics/size"})) {
 			WithSmallTextFile<4096>(f, [&os, fsid, &mds_sessions](std::string_view contents){
 				ExportCephSize(os, fsid, mds_sessions.name, contents);
 			});
@@ -770,7 +770,7 @@ ExportCeph(BufferedOutputStream &os)
 			f.Close();
 		}
 
-		if (f.OpenReadOnly(subdir, "metrics/caps")) {
+		if (f.OpenReadOnly({subdir, "metrics/caps"})) {
 			WithSmallTextFile<4096>(f, [&os, fsid, &mds_sessions](std::string_view contents){
 				ExportCephCaps(os, fsid, mds_sessions.name, contents);
 			});
@@ -778,7 +778,7 @@ ExportCeph(BufferedOutputStream &os)
 			f.Close();
 		}
 
-		if (f.OpenReadOnly(subdir, "metrics/counters")) {
+		if (f.OpenReadOnly({subdir, "metrics/counters"})) {
 			WithSmallTextFile<4096>(f, [&os, fsid, &mds_sessions](std::string_view contents){
 				ExportCephCounters(os, fsid, mds_sessions.name, contents);
 			});

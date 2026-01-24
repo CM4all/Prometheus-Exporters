@@ -149,7 +149,7 @@ WalkContext::Dive(FileAt file)
 	length += name_length;
 	path[length] = 0;
 
-	DoWalk(OpenDirectory(file.directory, file.name, O_NOFOLLOW));
+	DoWalk(OpenDirectory({file.directory, file.name}, O_NOFOLLOW));
 
 	length = old_length;
 	path[length] = 0;
@@ -284,7 +284,7 @@ CollectCgroup1(const CgroupExporterConfig &config)
 		WalkContext ctx(config, data);
 
 		try {
-			ctx.DoWalk(OpenDirectory(FileDescriptor(AT_FDCWD), mnt));
+			ctx.DoWalk(OpenDirectory({FileDescriptor::Undefined(), mnt}));
 		} catch (...) {
 			PrintException(std::current_exception());
 		}
@@ -300,7 +300,7 @@ CollectCgroup2(const CgroupExporterConfig &config)
 
 	try {
 		WalkContext ctx(config, data);
-		ctx.DoWalk(OpenDirectory(FileDescriptor(AT_FDCWD), "/sys/fs/cgroup"));
+		ctx.DoWalk(OpenDirectory({FileDescriptor::Undefined(), "/sys/fs/cgroup"}));
 	} catch (...) {
 		PrintException(std::current_exception());
 	}
