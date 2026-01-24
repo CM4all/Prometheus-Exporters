@@ -1,5 +1,6 @@
 cm4all-prometheus-exporters (0.18) unstable; urgency=low
 
+  * cgroup-exporter: show "memory.events" and "pids.events"
   * switch to C++23
   * require Meson 1.2
 

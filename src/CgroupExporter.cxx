@@ -74,13 +74,13 @@ struct CgroupCpuacctValues {
 struct CgroupMemoryValues {
 	int64_t usage = -1, kmem_usage = -1, memsw_usage = -1;
 	int64_t swap_usage = -1;
-	int64_t failcnt = -1, kmem_failfnt = -1, memsw_failcnt = -1;
-	std::map<std::string, uint64_t, std::less<>> stat;
+	std::map<std::string, uint64_t, std::less<>> stat, events;
 };
 
 struct CgroupPidsValues {
 	int64_t current = -1;
 	int64_t forks = -1;
+	std::map<std::string, uint64_t, std::less<>> events;
 };
 
 struct CgroupValues {
@@ -232,10 +232,18 @@ WalkContext::HandleRegularFile(FileAt file)
 
 			group.memory.stat[std::string{name}] = ParseUint64(value);
 		});
+	} else if (StringIsEqual(base, "memory.events")) {
+		ForEachNameValue(file, [&group](auto name, auto value){
+			group.memory.events[std::string{name}] = ParseUint64(value);
+		});
 	} else if (StringIsEqual(base, "pids.current")) {
 		group.pids.current = ReadUint64File(file);
 	} else if (StringIsEqual(base, "pids.forks")) {
 		group.pids.forks = ReadUint64File(file);
+	} else if (StringIsEqual(base, "pids.events")) {
+		ForEachNameValue(file, [&group](auto name, auto value){
+			group.pids.events[std::string{name}] = ParseUint64(value);
+		});
 	} else if (StringIsEqual(base, "cpu.pressure")) {
 		group.cpu_pressure = ReadPressureFile(file);
 	} else if (StringIsEqual(base, "io.pressure")) {
@@ -435,6 +443,8 @@ DumpCgroup(BufferedOutputStream &os, const CgroupsData &data)
 
 	os.Write(R"(# HELP cgroup_memory_usage Memory usage in bytes
 # TYPE cgroup_memory_usage gauge
+# HELP cgroup_memory_events Memory events
+# TYPE cgroup_memory_events counter
 )");
 
 	for (const auto &i : data.groups) {
@@ -447,28 +457,26 @@ DumpCgroup(BufferedOutputStream &os, const CgroupsData &data)
 
 		for (const auto &m : memory.stat)
 			WriteMemory(os, group, m.first, m.second);
-	}
 
-	os.Write(R"(# HELP cgroup_memory_failures Memory limit failures
-# TYPE cgroup_memory_failures counter
-)");
-
-	for (const auto &i : data.groups) {
-		const std::string_view group = i.first;
-		const auto &memory = i.second.memory;
-		WriteMemory(os, group, "memory"sv, memory.failcnt);
-		WriteMemory(os, group, "kmem"sv, memory.kmem_failfnt);
-		WriteMemory(os, group, "memsw"sv, memory.memsw_failcnt);
+		for (const auto &[name, value] : memory.events)
+			os.Fmt("cgroup_memory_events{{groupname={:?},type={:?}}} {}\n",
+			       group, name, value);
 	}
 
 	os.Write(R"(# HELP cgroup_pids Process/Thread count
 # TYPE cgroup_pids gauge
+# HELP cgroup_memory_events PIDs events
+# TYPE cgroup_memory_events counter
 )");
 
 	for (const auto &i : data.groups) {
 		const std::string_view group = i.first;
 		const auto &pids = i.second.pids;
 		WritePids(os, group, pids);
+
+		for (const auto &[name, value] : pids.events)
+			os.Fmt("cgroup_pids_events{{groupname={:?},type={:?}}} {}\n",
+			       group, name, value);
 	}
 
 	os.Write(R"(# HELP cgroup_pressure_ratio Pressure stall ratio
