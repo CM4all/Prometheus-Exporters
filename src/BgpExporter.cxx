@@ -43,8 +43,9 @@ SpawnStdoutPipe(char *const* argv, char *const* envp)
         posix_spawn_file_actions_adddup2(&file_actions, stdout_w.Get(), STDOUT_FILENO);
 
 	pid_t pid;
-	if (posix_spawn(&pid, argv[0], &file_actions, &attr, argv, envp) != 0)
-		throw MakeErrno("Failed to execute process");
+	if (int error = posix_spawn(&pid, argv[0], &file_actions, &attr, argv, envp);
+	    error != 0)
+		throw MakeErrno(error, "Failed to execute process");
 
 	return stdout_r;
 }
