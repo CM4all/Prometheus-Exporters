@@ -1,6 +1,8 @@
 [Unit]
 Description=CM4all Prometheus openbgpd Exporter
 
+After=openbgpd.service
+
 [Service]
 DynamicUser=yes
 
