@@ -5,6 +5,7 @@ Maintainer: Max Kellermann <mk@cm4all.com>
 Build-Depends: debhelper (>= 12~),
  meson (>= 1.2),
  g++ (>= 12),
+ pkg-config,
  zlib1g-dev,
  libcurl4-openssl-dev (>= 7.40),
  libfmt-dev (>= 9),
