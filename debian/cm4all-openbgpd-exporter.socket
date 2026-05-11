@@ -1,5 +1,4 @@
 [Unit]
-After=openbgpd.service
 
 [Socket]
 ListenStream=%t/cm4all/prometheus-exporters/openbgpd.socket
