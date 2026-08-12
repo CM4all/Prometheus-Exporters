@@ -9,6 +9,7 @@
 #include "system/Error.hxx"
 #include "io/BufferedOutputStream.hxx"
 #include "io/DirectoryReader.hxx"
+#include "io/FileName.hxx"
 #include "io/SmallTextFile.hxx"
 #include "util/IterableSplitString.hxx"
 #include "util/NumberParser.hxx"
@@ -21,6 +22,26 @@
 #include <fcntl.h>
 
 using std::string_view_literals::operator""sv;
+
+static std::string_view
+ReadTextFile(FileDescriptor fd, std::span<char> buffer) noexcept
+{
+        ssize_t nbytes = fd.ReadAt(0, std::as_writable_bytes(buffer));
+        if (nbytes < 0)
+                return {};
+
+        return {buffer.data(), static_cast<std::size_t>(nbytes)};
+}
+
+static std::string_view
+ReadTextFile(FileAt f, std::span<char> buffer) noexcept
+{
+        UniqueFileDescriptor fd;
+        if (!fd.Open(f, O_RDONLY|O_NOFOLLOW))
+                return {};
+
+        return ReadTextFile(fd, buffer);
+}
 
 static inline auto
 ParseUserHz(std::string_view text)
@@ -105,6 +126,121 @@ ExportHungTasks(BufferedOutputStream &os)
 		WithSmallTextFile<64>(f, [&os](std::string_view contents){
 			os.Fmt("hung_task_detect_count {}\n", Strip(contents));
 		});
+	}
+}
+
+static std::string_view
+ReadLink(FileAt f, std::span<char> buffer) noexcept
+{
+	ssize_t result = readlinkat(f.directory.Get(), f.name, buffer.data(), buffer.size());
+	if (result < 0)
+		return {};
+
+	return std::string_view{buffer.data(), static_cast<std::size_t>(result)};
+}
+
+static void
+ExportOneHwmon(BufferedOutputStream &os, FileDescriptor hwmon_fd,
+               std::string_view device, std::string_view chip_name,
+               std::string_view prefix, unsigned start_index,
+               double factor)
+{
+	for (unsigned i = start_index;; ++i) {
+		char filename[64];
+		char *end = fmt::format_to(filename, "{}{}"sv, prefix, i);
+		strcpy(end, "_input");
+
+		UniqueFileDescriptor fd;
+		if (!fd.Open({hwmon_fd, filename}, O_RDONLY|O_NOFOLLOW))
+			break;
+
+		WithSmallTextFile<64>(fd, [&os, hwmon_fd,
+                                           device, chip_name, prefix, factor,
+                                           &filename, end](std::string_view contents){
+			contents = StripRight(contents);
+			unsigned value;
+			if (!ParseIntegerTo(contents, value))
+				return;
+
+			os.Fmt("hwmon_{}{{device={:?},sensor={:?}"sv, prefix, device, std::string_view{filename, end});
+
+                        if (!chip_name.empty())
+                                os.Fmt(",chip_name={:?}"sv, StripRight(chip_name));
+
+                        strcpy(end, "_label");
+                        if (UniqueFileDescriptor label_fd; label_fd.Open({hwmon_fd, filename}, O_RDONLY|O_NOFOLLOW)) {
+                                WithSmallTextFile<256>(label_fd, [&os](std::string_view label){
+                                        os.Fmt(",label={:?}"sv, StripRight(label));
+                                });
+                        }
+
+			os.Fmt("}} {:e}\n", value * factor);
+		});
+	}
+}
+
+static constexpr std::string_view
+HwmonSymlinkToDeviceName(std::string_view s) noexcept
+{
+        SkipPrefix(s, "../../devices/"sv);
+
+        while (true) {
+                auto [a, b] = SplitLast(s, '/');
+                if (!b.starts_with("hwmon"sv))
+                        break;
+
+                s = a;
+        }
+
+        return s;
+}
+
+static void
+ExportHwmon(BufferedOutputStream &os)
+{
+	os.Write(R"(
+# HELP hwmon_in Voltage [Volt]
+# TYPE hwmon_in gauge
+# HELP hwmon_fan Fan speed [rpm]
+# TYPE hwmon_fan gauge
+# HELP hwmon_temp Temperature [degrees Celsius]
+# TYPE hwmon_temp gauge
+# HELP hwmon_curr Current [Ampere]
+# TYPE hwmon_curr gauge
+# HELP hwmon_power Power [Watt]
+# TYPE hwmon_power gauge
+# HELP hwmon_energy Cumulative energy use [Joule]
+# TYPE hwmon_energy counter
+# HELP hwmon_humidity Humidity [%]
+# TYPE hwmon_humidity gauge
+)");
+
+	UniqueFileDescriptor d;
+	if (!d.Open("/sys/class/hwmon", O_DIRECTORY|O_RDONLY))
+		return;
+
+	DirectoryReader dr{std::move(d)};
+	while (auto hwmon_name = dr.Read()) {
+		if (IsSpecialFilename(hwmon_name))
+			continue;
+
+		UniqueFileDescriptor hwmon_fd;
+		if (!hwmon_fd.Open({dr.GetFileDescriptor(), hwmon_name}, O_DIRECTORY|O_PATH))
+			continue;
+
+		char symlink_buffer[256];
+		std::string_view device = HwmonSymlinkToDeviceName(ReadLink({dr.GetFileDescriptor(), hwmon_name}, symlink_buffer));
+
+                char chip_name_buffer[256];
+                const std::string_view chip_name = StripRight(ReadTextFile({hwmon_fd, "name"}, chip_name_buffer));
+
+		ExportOneHwmon(os, hwmon_fd, device, chip_name, "in"sv, 0, 1e-3);
+		ExportOneHwmon(os, hwmon_fd, device, chip_name, "fan"sv, 1, 1);
+		ExportOneHwmon(os, hwmon_fd, device, chip_name, "temp"sv, 1, 1e-3);
+		ExportOneHwmon(os, hwmon_fd, device, chip_name, "curr"sv, 1, 1e-3);
+		ExportOneHwmon(os, hwmon_fd, device, chip_name, "power"sv, 1, 1e-6);
+		ExportOneHwmon(os, hwmon_fd, device, chip_name, "energy"sv, 1, 1e-6);
+		ExportOneHwmon(os, hwmon_fd, device, chip_name, "humidity"sv, 1, 1e-3);
 	}
 }
 
@@ -793,6 +929,7 @@ ExportKernel(BufferedOutputStream &os)
 {
 	ExportOopsWarnCounters(os);
 	ExportHungTasks(os);
+	ExportHwmon(os);
 	Export<256>(os, "/proc/loadavg", ExportLoadAverage);
 	Export<8192>(os, "/proc/meminfo", ExportMemInfo);
 	Export<32768>(os, "/proc/stat", ExportStat);
