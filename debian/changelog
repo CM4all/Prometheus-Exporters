@@ -1,6 +1,6 @@
 cm4all-prometheus-exporters (0.21) unstable; urgency=low
 
-  * 
+  * support libfmt 12.2.0
 
  --   
 

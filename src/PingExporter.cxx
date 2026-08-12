@@ -11,7 +11,7 @@
 #include "time/Cast.hxx"
 #include "util/PrintException.hxx"
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <optional>
 
