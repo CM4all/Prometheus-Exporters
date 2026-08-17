@@ -28,7 +28,7 @@ ParseNS(std::string_view text) noexcept
 /**
  * Contents of the file "/sys/kernel/debug/ceph/X/mds_sessions".
  */
-struct MdsSessions {
+struct CephMds {
 	/**
 	 * The "name" mount option.
 	 */
@@ -44,7 +44,7 @@ struct MdsSessions {
  * @parm file the "mds_sessions" file descriptor
  */
 static void
-LoadMdsSessions(MdsSessions &result, auto &&file)
+LoadMdsSessions(CephMds &result, auto &&file)
 {
 	for (std::string_view line : IterableSmallTextFile<1024>(std::move(file))) {
 		if (SkipPrefix(line, "name \""sv))
@@ -192,7 +192,7 @@ ExportCeph(BufferedOutputStream &os)
 		if (!subdir.Open({dr.GetFileDescriptor(), filename}, O_DIRECTORY|O_PATH))
 			continue;
 
-		MdsSessions mds_sessions;
+		CephMds mds_sessions;
 
 		try {
 			LoadMdsSessions(mds_sessions, FileAt{subdir, "mds_sessions"});
