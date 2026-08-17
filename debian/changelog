@@ -2,7 +2,7 @@ cm4all-prometheus-exporters (0.22) unstable; urgency=low
 
   * kernel-exporter: show Ceph-MDS states from mdsmap and mds_sessions
 
- --   
+ -- Max Kellermann <max.kellermann@ionos.com>  Mon, 17 Aug 2026 23:37:46 +0200
 
 cm4all-prometheus-exporters (0.21) unstable; urgency=low
 
