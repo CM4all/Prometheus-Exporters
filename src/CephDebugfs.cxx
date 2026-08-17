@@ -183,13 +183,13 @@ ExportCeph(BufferedOutputStream &os)
 		return;
 
 	DirectoryReader dr{std::move(d)};
-	while (auto name = dr.Read()) {
-		const auto fsid = Split(std::string_view{name}, '.').first;
+	while (auto filename = dr.Read()) {
+		const auto fsid = Split(std::string_view{filename}, '.').first;
 		if (fsid.empty())
 			continue;
 
 		UniqueFileDescriptor subdir;
-		if (!subdir.Open({dr.GetFileDescriptor(), name}, O_DIRECTORY|O_PATH))
+		if (!subdir.Open({dr.GetFileDescriptor(), filename}, O_DIRECTORY|O_PATH))
 			continue;
 
 		MdsSessions mds_sessions;
@@ -200,26 +200,28 @@ ExportCeph(BufferedOutputStream &os)
 			PrintException(std::current_exception());
 		}
 
+		const std::string_view name = mds_sessions.name;
+
 		UniqueFileDescriptor f;
 		if (f.OpenReadOnly({subdir, "metrics/size"})) {
-			WithSmallTextFile<4096>(f, [&os, fsid, &mds_sessions](std::string_view contents){
-				ExportCephSize(os, fsid, mds_sessions.name, contents);
+			WithSmallTextFile<4096>(f, [&os, fsid, name](std::string_view contents){
+				ExportCephSize(os, fsid, name, contents);
 			});
 
 			f.Close();
 		}
 
 		if (f.OpenReadOnly({subdir, "metrics/caps"})) {
-			WithSmallTextFile<4096>(f, [&os, fsid, &mds_sessions](std::string_view contents){
-				ExportCephCaps(os, fsid, mds_sessions.name, contents);
+			WithSmallTextFile<4096>(f, [&os, fsid, name](std::string_view contents){
+				ExportCephCaps(os, fsid, name, contents);
 			});
 
 			f.Close();
 		}
 
 		if (f.OpenReadOnly({subdir, "metrics/counters"})) {
-			WithSmallTextFile<4096>(f, [&os, fsid, &mds_sessions](std::string_view contents){
-				ExportCephCounters(os, fsid, mds_sessions.name, contents);
+			WithSmallTextFile<4096>(f, [&os, fsid, name](std::string_view contents){
+				ExportCephCounters(os, fsid, name, contents);
 			});
 
 			f.Close();
