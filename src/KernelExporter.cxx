@@ -74,17 +74,13 @@ struct MdsSessions {
  *
  * @parm file the "mds_sessions" file descriptor
  */
-static MdsSessions
-LoadMdsSessions(auto &&file)
+static void
+LoadMdsSessions(MdsSessions &result, auto &&file)
 {
-	MdsSessions result;
-
 	for (std::string_view line : IterableSmallTextFile<1024>(std::move(file))) {
 		if (SkipPrefix(line, "name \""sv))
 			result.name = Split(line, '"').first;
 	}
-
-	return result;
 }
 
 static void
@@ -892,7 +888,7 @@ ExportCeph(BufferedOutputStream &os)
 		MdsSessions mds_sessions;
 
 		try {
-			mds_sessions = LoadMdsSessions(FileAt{subdir, "mds_sessions"});
+			LoadMdsSessions(mds_sessions, FileAt{subdir, "mds_sessions"});
 		} catch (...) {
 			PrintException(std::current_exception());
 		}
