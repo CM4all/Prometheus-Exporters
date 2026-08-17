@@ -31,6 +31,8 @@ ParseNS(std::string_view text) noexcept
  * Contents of the file "/sys/kernel/debug/ceph/X/mds_sessions".
  */
 struct CephMds {
+	std::string global_id;
+
 	/**
 	 * The "name" mount option.
 	 */
@@ -49,6 +51,8 @@ struct CephMds {
 
 	StaticVector<OneMds, 0x400> list;
 
+	bool blocklisted = false;
+
 	OneMds *MakeMds(std::size_t id) noexcept {
 		if (id >= list.max_size())
 			return nullptr;
@@ -59,6 +63,24 @@ struct CephMds {
 		return &list[id];
 	}
 };
+
+/**
+ * Load the contents of the file
+ * "/sys/kernel/debug/ceph/X/status".
+ *
+ * Throws on error.
+ *
+ * @parm file the "status" file descriptor
+ */
+static void
+LoadStatus(CephMds &result, auto &&file)
+{
+	for (std::string_view line : IterableSmallTextFile<1024>(std::move(file))) {
+		if (SkipPrefix(line, "blocklisted: "sv)) {
+			result.blocklisted = line != "false"sv;
+		}
+	}
+}
 
 /**
  * Load the contents of the file
@@ -118,6 +140,8 @@ LoadMdsSessions(CephMds &result, auto &&file)
 	for (std::string_view line : IterableSmallTextFile<1024>(std::move(file))) {
 		if (SkipPrefix(line, "name \""sv))
 			result.name = Split(line, '"').first;
+		else if (SkipPrefix(line, "global_id "sv))
+			result.global_id = line;
 		else if (SkipPrefix(line, "mds."sv)) {
 			const auto [id_string, session_state] = Split(line, ' ');
 
@@ -242,6 +266,8 @@ void
 ExportCeph(BufferedOutputStream &os)
 {
 	os.Write(R"(
+# HELP ceph_client_blocklisted Is this Ceph client blocklisted?
+# TYPE ceph_client_blocklisted gauge
 # HELP ceph_mds Information about each MDS
 # TYPE ceph_mds gauge
 # HELP ceph_metrics_size_bytes Bytes transferred to/from a Ceph server
@@ -279,6 +305,12 @@ ExportCeph(BufferedOutputStream &os)
 		CephMds mds_sessions;
 
 		try {
+			LoadStatus(mds_sessions, FileAt{subdir, "status"});
+		} catch (...) {
+			PrintException(std::current_exception());
+		}
+
+		try {
 			LoadMdsMap(mds_sessions, FileAt{subdir, "mdsmap"});
 		} catch (...) {
 			PrintException(std::current_exception());
@@ -291,6 +323,14 @@ ExportCeph(BufferedOutputStream &os)
 		}
 
 		const std::string_view name = mds_sessions.name;
+
+		os.Fmt("ceph_client_blocklisted{{fsid={:?},name={:?}"sv, fsid, name);
+
+		if (!mds_sessions.global_id.empty())
+			os.Fmt(",global_id={:?}"sv, mds_sessions.global_id);
+
+		os.Fmt("}} {}\n"sv, mds_sessions.blocklisted ? "1"sv : "0"sv);
+
 		for (std::size_t id = 0; id < mds_sessions.list.size(); ++id) {
 			const auto &mds = mds_sessions.list[id];
 			if (!mds.IsDefined())
