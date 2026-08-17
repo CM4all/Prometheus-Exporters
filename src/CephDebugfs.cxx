@@ -10,10 +10,12 @@
 #include "util/IterableSplitString.hxx"
 #include "util/NumberParser.hxx"
 #include "util/PrintException.hxx"
+#include "util/StaticVector.hxx"
 #include "util/StringCompare.hxx"
 #include "util/StringSplit.hxx"
 
 #include <cstdlib>
+#include <string>
 
 #include <fcntl.h>
 
@@ -33,7 +35,74 @@ struct CephMds {
 	 * The "name" mount option.
 	 */
 	std::string name;
+
+	struct OneMds {
+		std::string protocol;
+		std::string address;
+		std::string state;
+		std::string session_state;
+
+		bool IsDefined() const noexcept {
+			return !protocol.empty() || !address.empty() || !state.empty() || !session_state.empty();
+		}
+	};
+
+	StaticVector<OneMds, 0x400> list;
+
+	OneMds *MakeMds(std::size_t id) noexcept {
+		if (id >= list.max_size())
+			return nullptr;
+
+		while (list.size() <= id)
+			list.emplace_back();
+
+		return &list[id];
+	}
 };
+
+/**
+ * Load the contents of the file
+ * "/sys/kernel/debug/ceph/X/mdsmap".
+ *
+ * Throws on error.
+ *
+ * @parm file the "mdsmap" file descriptor
+ */
+static void
+LoadMdsMap(CephMds &result, auto &&file)
+{
+	for (std::string_view line : IterableSmallTextFile<4096>(std::move(file))) {
+		if (SkipPrefix(line, "\tmds"sv)) {
+			const auto [id_string, rest1] = Split(line, '\t');
+			if (id_string.empty())
+				continue;
+
+			auto [address, rest2] = Split(rest1, '\t');
+			auto [state, _] = Split(rest2, '\t');
+
+			unsigned id;
+			if (!ParseIntegerTo(id_string, id))
+				continue;
+
+			auto *mds = result.MakeMds(id);
+			if (mds == nullptr)
+				continue;
+
+			if (address.starts_with('(')) {
+				const auto [protocol, address2] = Split(address.substr(1), ')');
+				mds->protocol = protocol;
+				mds->address = address2;
+			} else {
+				mds->address = address;
+			}
+
+			if (state.starts_with('(') && state.ends_with(')'))
+				state = state.substr(1, state.size() - 2);
+
+			mds->state = state;
+		}
+	}
+}
 
 /**
  * Load the contents of the file
@@ -49,6 +118,19 @@ LoadMdsSessions(CephMds &result, auto &&file)
 	for (std::string_view line : IterableSmallTextFile<1024>(std::move(file))) {
 		if (SkipPrefix(line, "name \""sv))
 			result.name = Split(line, '"').first;
+		else if (SkipPrefix(line, "mds."sv)) {
+			const auto [id_string, session_state] = Split(line, ' ');
+
+			unsigned id;
+			if (!ParseIntegerTo(id_string, id))
+				continue;
+
+			auto *mds = result.MakeMds(id);
+			if (mds == nullptr)
+				continue;
+
+			mds->session_state = session_state;
+		}
 	}
 }
 
@@ -160,6 +242,8 @@ void
 ExportCeph(BufferedOutputStream &os)
 {
 	os.Write(R"(
+# HELP ceph_mds Information about each MDS
+# TYPE ceph_mds gauge
 # HELP ceph_metrics_size_bytes Bytes transferred to/from a Ceph server
 # TYPE ceph_metrics_size_bytes counter
 # HELP ceph_metrics_size_count Number of operations to/from a Ceph server
@@ -195,12 +279,39 @@ ExportCeph(BufferedOutputStream &os)
 		CephMds mds_sessions;
 
 		try {
+			LoadMdsMap(mds_sessions, FileAt{subdir, "mdsmap"});
+		} catch (...) {
+			PrintException(std::current_exception());
+		}
+
+		try {
 			LoadMdsSessions(mds_sessions, FileAt{subdir, "mds_sessions"});
 		} catch (...) {
 			PrintException(std::current_exception());
 		}
 
 		const std::string_view name = mds_sessions.name;
+		for (std::size_t id = 0; id < mds_sessions.list.size(); ++id) {
+			const auto &mds = mds_sessions.list[id];
+			if (!mds.IsDefined())
+				continue;
+
+			os.Fmt("ceph_mds{{fsid={:?},name={:?},mds=\"{}\""sv, fsid, name, id);
+
+			if (!mds.protocol.empty())
+				os.Fmt(",protocol={:?}"sv, mds.protocol);
+
+			if (!mds.address.empty())
+				os.Fmt(",address={:?}"sv, mds.address);
+
+			if (!mds.state.empty())
+				os.Fmt(",state={:?}"sv, mds.state);
+
+			if (!mds.session_state.empty())
+				os.Fmt(",session_state={:?}"sv, mds.session_state);
+
+			os.Write("} 1\n"sv);
+		}
 
 		UniqueFileDescriptor f;
 		if (f.OpenReadOnly({subdir, "metrics/size"})) {
