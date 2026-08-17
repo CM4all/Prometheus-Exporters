@@ -183,6 +183,7 @@ executable(
 executable(
   'cm4all-kernel-exporter',
   'src/KernelExporter.cxx',
+  'src/CephDebugfs.cxx',
   'src/Pressure.cxx',
   include_directories: inc,
   dependencies: [
