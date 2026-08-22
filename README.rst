@@ -69,3 +69,12 @@ By default, all socket units are bound to
 the kernel exporter, run::
 
   curl --unix-socket /run/cm4all/prometheus-exporters/kernel.socket http://localhost/
+
+For a quick test, all exporters can be called from the shell, so you
+can simply run::
+
+  $ cm4all-kernel-exporter
+  # HELP oops_count Number of kernel "oops"
+  # TYPE oops_count counter
+  oops_count 0
+  [...]
