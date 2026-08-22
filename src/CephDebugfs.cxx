@@ -5,8 +5,12 @@
 #include "CephDebugfs.hxx"
 #include "NumberParser.hxx"
 #include "io/BufferedOutputStream.hxx"
+#include "io/BufferedReader.hxx"
+#include "io/FdReader.hxx"
 #include "io/DirectoryReader.hxx"
+#include "io/Open.hxx"
 #include "io/SmallTextFile.hxx"
+#include "io/UniqueFileDescriptor.hxx"
 #include "util/IterableSplitString.hxx"
 #include "util/NumberParser.hxx"
 #include "util/PrintException.hxx"
@@ -161,6 +165,102 @@ LoadMdsSessions(CephMds &result, auto &&file)
 	}
 }
 
+static constexpr std::array ceph_mds_ops{
+	"lookup"sv,
+	"lookuphash"sv,
+	"lookupparent"sv,
+	"lookupino"sv,
+	"lookupname"sv,
+	"getattr"sv,
+	"getvxattr"sv,
+	"setxattr"sv,
+	"setattr"sv,
+	"rmxattr"sv,
+	"setlayou"sv,
+	"setdirlayout"sv,
+	"readdir"sv,
+	"mknod"sv,
+	"link"sv,
+	"unlink"sv,
+	"rename"sv,
+	"mkdir"sv,
+	"rmdir"sv,
+	"symlink"sv,
+	"create"sv,
+	"open"sv,
+	"lookupsnap"sv,
+	"lssnap"sv,
+	"mksnap"sv,
+	"rmsnap"sv,
+	"renamesnap"sv,
+	"setfilelock"sv,
+	"getfilelock"sv,
+};
+
+static std::size_t
+ParseMdsOpName(std::string_view s) noexcept
+{
+	const auto it = std::find(ceph_mds_ops.begin(), ceph_mds_ops.end(), s);
+	return std::distance(ceph_mds_ops.begin(), it);
+}
+
+struct CephMdsc {
+	struct PerOp {
+		uint64_t count;
+	};
+
+	struct PerMds {
+		std::array<PerOp, std::size(ceph_mds_ops) + 1> per_op;
+	};
+
+	static constexpr std::size_t UNKNOWN_MDS = CEPH_MAX_MDS;
+	static constexpr std::size_t NO_REQUEST = UNKNOWN_MDS + 1;
+	static constexpr std::size_t NO_SESSION = NO_REQUEST + 1;
+
+	std::array<PerMds, CEPH_MAX_MDS + 2> per_mds{};
+};
+
+static void
+LoadMdsc(BufferedReader &r, CephMdsc &result)
+{
+	char *line;
+	while ((line = r.ReadLine()) != nullptr) {
+		const auto [tid, rest1] = Split(std::string_view{line}, '\t');
+		const auto [mds_name, rest2] = Split(rest1, '\t');
+		const auto [op_name, rest3] = Split(rest2, '\t');
+
+		std::size_t mds_rank;
+		if (const auto mds_rank_s = StringAfterPrefix(mds_name, "mds"sv);
+		    !mds_rank_s.empty()) {
+			if (!ParseIntegerTo(mds_rank_s, mds_rank) || mds_rank >= CEPH_MAX_MDS)
+				mds_rank = CephMdsc::UNKNOWN_MDS;
+		} else if (mds_name == "(no request)"sv)
+			mds_rank = CephMdsc::NO_REQUEST;
+		else if (mds_name == "(no session)"sv)
+			mds_rank = CephMdsc::NO_SESSION;
+		else
+			mds_rank = CephMdsc::UNKNOWN_MDS;
+
+		std::size_t op = ParseMdsOpName(op_name);
+
+		++result.per_mds[mds_rank].per_op[op].count;
+	}
+}
+
+static bool
+LoadMdsc(FileAt file, CephMdsc &result)
+{
+	UniqueFileDescriptor fd;
+	if (!fd.OpenReadOnly(file))
+		return false;
+
+	FdReader reader{fd};
+	BufferedReader buffered_reader{reader};
+
+	LoadMdsc(buffered_reader, result);
+	return true;
+}
+
 static void
 ExportCephSize(BufferedOutputStream &os, std::string_view fsid, std::string_view name,
 	       std::string_view contents)
@@ -273,6 +373,8 @@ ExportCeph(BufferedOutputStream &os)
 # TYPE ceph_client_blocklisted gauge
 # HELP ceph_mds Information about each MDS
 # TYPE ceph_mds gauge
+# HELP ceph_mds_pending_requests Number of pending MDS requests
+# TYPE ceph_mds_pending_requests gauge
 # HELP ceph_metrics_size_bytes Bytes transferred to/from a Ceph server
 # TYPE ceph_metrics_size_bytes counter
 # HELP ceph_metrics_size_count Number of operations to/from a Ceph server
@@ -354,6 +456,57 @@ ExportCeph(BufferedOutputStream &os)
 				os.Fmt(",session_state={:?}"sv, mds.session_state);
 
 			os.Write("} 1\n"sv);
+		}
+
+		if (CephMdsc mdsc; LoadMdsc({subdir, "mdsc"}, mdsc)) {
+			for (std::size_t rank = 0; rank < mds_sessions.list.size(); ++rank) {
+				const auto &mdsc_rank = mdsc.per_mds[rank];
+
+				std::string_view mds_address;
+
+				if (rank < mds_sessions.list.size()) {
+					const auto &mds = mds_sessions.list[rank];
+					if (mds.IsDefined())
+						mds_address = mds.address;
+				}
+
+				for (std::size_t op = 0; op < mdsc_rank.per_op.size(); ++op) {
+					const auto &per_op = mdsc_rank.per_op[op];
+					if (per_op.count == 0)
+						continue;
+
+					const std::string_view op_name = op < ceph_mds_ops.size()
+						? ceph_mds_ops[op]
+						: "unknown"sv;
+
+					os.Fmt("ceph_mds_pending_requests{{fsid={:?},name={:?}"sv,
+					       fsid, name);
+
+					switch (rank) {
+					case CephMdsc::UNKNOWN_MDS:
+						os.Write(",mds=\"unkown\""sv);
+						break;
+
+					case CephMdsc::NO_REQUEST:
+						os.Write(",mds=\"no_request\""sv);
+						break;
+
+					case CephMdsc::NO_SESSION:
+						os.Write(",mds=\"no_session\""sv);
+						break;
+
+					default:
+						os.Fmt(",mds=\"{}\""sv, rank);
+						break;
+					}
+
+					if (!mds_address.empty())
+						os.Fmt(",address={:?}"sv, mds_address);
+
+					os.Fmt(",op={:?}}} {}\n",
+					       op_name, per_op.count);
+				}
+			}
 		}
 
 		UniqueFileDescriptor f;
