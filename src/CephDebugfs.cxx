@@ -14,12 +14,15 @@
 #include "util/StringCompare.hxx"
 #include "util/StringSplit.hxx"
 
+#include <array>
 #include <cstdlib>
 #include <string>
 
 #include <fcntl.h>
 
 using std::string_view_literals::operator""sv;
+
+static constexpr std::size_t CEPH_MAX_MDS = 0x400;
 
 static inline auto
 ParseNS(std::string_view text) noexcept
@@ -49,7 +52,7 @@ struct CephMds {
 		}
 	};
 
-	StaticVector<OneMds, 0x400> list;
+	StaticVector<OneMds, CEPH_MAX_MDS> list;
 
 	bool blocklisted = false;
 
