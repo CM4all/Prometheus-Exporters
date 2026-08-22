@@ -217,7 +217,7 @@ struct CephMdsc {
 	static constexpr std::size_t NO_REQUEST = UNKNOWN_MDS + 1;
 	static constexpr std::size_t NO_SESSION = NO_REQUEST + 1;
 
-	std::array<PerMds, CEPH_MAX_MDS + 2> per_mds{};
+	std::array<PerMds, CEPH_MAX_MDS + 3> per_mds{};
 };
 
 static void
