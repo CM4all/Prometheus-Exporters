@@ -1,5 +1,6 @@
 cm4all-prometheus-exporters (0.24) unstable; urgency=low
 
+  * kernel-exporter: show rank-less "ceph/mdsc" entries
   * require CURL 7.85.0
 
  --   

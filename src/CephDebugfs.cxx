@@ -459,7 +459,7 @@ ExportCeph(BufferedOutputStream &os)
 		}
 
 		if (CephMdsc mdsc; LoadMdsc({subdir, "mdsc"}, mdsc)) {
-			for (std::size_t rank = 0; rank < mds_sessions.list.size(); ++rank) {
+			for (std::size_t rank = 0; rank < mdsc.per_mds.size(); ++rank) {
 				const auto &mdsc_rank = mdsc.per_mds[rank];
 
 				std::string_view mds_address;
